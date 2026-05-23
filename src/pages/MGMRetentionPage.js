@@ -125,7 +125,7 @@ export default function MGMRetentionPage({ activeTab, onNavigate, results: extRe
   const setView = (v) => { _setView(v); };
   const [_tab, _setTab]        = useState('sport');
   const tab = activeTab || _tab;
-  const setTab = (t) => { _setTab(t); if (onNavigate) onNavigate('mgm-' + t); };
+  const setTab = useCallback((t) => { _setTab(t); if (onNavigate) onNavigate('mgm-' + t); }, [onNavigate]);
   const [search, setSearch]   = useState('');
   const [page, setPage]       = useState(1);
 
