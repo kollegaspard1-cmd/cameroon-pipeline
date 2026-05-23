@@ -317,8 +317,7 @@ export default function ObjectifsPage() {
       {/* Logs */}
       {logs.length > 0 && (
         <div className="log-console" style={{ marginBottom: '1rem' }}>
-          {logs.map((l, i) => <span key={i} className="log-line">{l}{'
-'}</span>)}
+          {logs.map((l, i) => <span key={i} className="log-line" style={{display:'block'}}>{l}</span>)}
         </div>
       )}
 
