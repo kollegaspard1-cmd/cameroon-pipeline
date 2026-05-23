@@ -18,11 +18,6 @@ export default function ObjectifsPage() {
 
   const log = (msg) => setLogs(p => [...p, msg]);
 
-  const handleDrop = (e, setter) => {
-    e.preventDefault();
-    const f = e.dataTransfer.files[0];
-    if (f) setter(f);
-  };
 
   // ── Chargement CSV ──────────────────────────────
   const loadCSV = (file) => new Promise((res, rej) => {

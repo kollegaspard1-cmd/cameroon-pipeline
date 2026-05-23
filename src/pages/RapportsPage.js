@@ -57,7 +57,6 @@ export default function RapportsPage() {
           }
         }
         if (hr === null) throw new Error('En-tête betshop introuvable');
-        const headers = raw[hr];
         const rows = [];
         for (let i = hr + 1; i < raw.length; i++) {
           const row = raw[i];
