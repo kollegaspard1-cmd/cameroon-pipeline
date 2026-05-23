@@ -8,11 +8,6 @@ const PAGE = 50;
 
 function nv(row, col) { const v = parseFloat(row[col]); return isNaN(v) ? 0 : v; }
 
-  if (!v && v !== 0) return '—';
-  if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1) + 'M';
-  if (Math.abs(v) >= 1000) return (v / 1000).toFixed(0) + 'K';
-  return Math.round(v).toLocaleString();
-}
 
 function parseFile(file) {
   return new Promise((res) => {
