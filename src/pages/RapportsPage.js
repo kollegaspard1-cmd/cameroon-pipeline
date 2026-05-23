@@ -57,6 +57,7 @@ export default function RapportsPage() {
           }
         }
         if (hr === null) throw new Error('En-tête betshop introuvable');
+        const headers = raw[hr];
         const rows = [];
         for (let i = hr + 1; i < raw.length; i++) {
           const row = raw[i];
@@ -92,7 +93,6 @@ export default function RapportsPage() {
         }
         if (hr === null) throw new Error("Colonne 'Tickets Objectif' introuvable");
         const headers = raw[hr].map(v => String(v).trim());
-        
         const ocIdx  = headers.findIndex(h => h.toLowerCase().includes('tickets objectif'));
         const tc2025 = headers.findIndex(h => h.toLowerCase().includes('tickets') && !h.toLowerCase().includes('objectif') && h.includes('2025'));
         const rows = [];
@@ -128,13 +128,12 @@ export default function RapportsPage() {
             if (vs.includes('ZONES') && vs.includes('SUPER EN CHARGE')) { hr = i; break; }
           }
           if (hr === null) return;
-          
-          const headers2 = raw[hr].map(v => String(v).trim().toUpperCase());
+          const headers = raw[hr].map(v => String(v).trim().toUpperCase());
           const ci = {
-            ZONES: headers2.findIndex(h => h === 'ZONES' || h === 'ZONE'),
-            SUPER: headers2.findIndex(h => h.includes('SUPER EN CHARGE')),
-            SALLES: headers2.findIndex(h => h === 'SALLES' || h === 'SALLE'),
-            TECH: headers2.findIndex(h => h.includes('NOMS TECHNIQUE') || h.includes('NOM TECHNIQUE')),
+            ZONES: headers.findIndex(h => h === 'ZONES' || h === 'ZONE'),
+            SUPER: headers.findIndex(h => h.includes('SUPER EN CHARGE')),
+            SALLES: headers.findIndex(h => h === 'SALLES' || h === 'SALLE'),
+            TECH: headers.findIndex(h => h.includes('NOMS TECHNIQUE') || h.includes('NOM TECHNIQUE')),
           };
           if (Object.values(ci).some(v => v < 0)) return;
           const rows = []; let lastZone = '', lastSuper = '';
@@ -420,10 +419,8 @@ export default function RapportsPage() {
   };
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1rem' }}>
-      <h2 style={{ fontFamily: 'monospace', color: 'var(--accent)', marginBottom: '1.5rem' }}>
-        RAPPORTS RÉALISATION vs OBJECTIF
-      </h2>
+    <div>
+      <p className="section-label">Réalisation vs Objectif</p>
 
       {/* Upload 3 fichiers */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -436,12 +433,12 @@ export default function RapportsPage() {
             onClick={() => ref.current.click()}
             onDragOver={e => e.preventDefault()}
             onDrop={e => { e.preventDefault(); setter(e.dataTransfer.files[0]); }}
-            style={{ border: `2px dashed ${file ? 'var(--accent)' : '#444'}`, borderRadius: 8, padding: '1rem', textAlign: 'center', cursor: 'pointer', background: 'var(--surface)' }}>
+            className={`drop-zone ${file ? 'has-file' : ''}`}>
             <input ref={ref} type="file" accept=".xlsx" hidden onChange={e => setter(e.target.files[0])} />
             <div style={{ fontSize: 22, marginBottom: 6 }}>📊</div>
-            <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--fg)' }}>{label}</div>
-            <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>{sub}</div>
-            {file && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--accent)' }}>✓ {file.name}</div>}
+            <div className="drop-label">{label}</div>
+            <div className="drop-sub">{sub}</div>
+            {file && <div className="file-chip">✓ {file.name}</div>}
           </div>
         ))}
       </div>
@@ -451,27 +448,28 @@ export default function RapportsPage() {
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: 'var(--muted)', maxWidth: 200 }}>
           Mois
           <input value={mois} onChange={e => setMois(e.target.value)}
-            style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #444', background: 'var(--surface)', color: 'var(--fg)', fontFamily: 'monospace', fontSize: 13 }} />
+            className="field-input" />
         </label>
       </div>
 
       <button onClick={runPipeline} disabled={!betshopFile || !objectifsFile || !recapFile || running}
-        style={{ padding: '10px 28px', background: running ? '#444' : 'var(--accent)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 'bold', fontSize: 14, marginBottom: '1.5rem' }}>
+        className="btn primary" style={{ fontSize: 14, padding: '11px 28px', marginBottom: '1.5rem' }}>
         {running ? '⏳ Génération...' : '▶ Générer les rapports'}
       </button>
 
       {/* Logs */}
       {logs.length > 0 && (
-        <div style={{ background: '#111', borderRadius: 8, padding: '1rem', fontFamily: 'monospace', fontSize: 12, color: '#aaa', maxHeight: 240, overflowY: 'auto', marginBottom: '1rem', whiteSpace: 'pre-wrap' }}>
-          {logs.join('\n')}
+        <div className="log-console" style={{ marginBottom: '1rem' }}>
+          {logs.map((l, i) => <span key={i} className="log-line">{l}{'
+'}</span>)}
         </div>
       )}
 
       {/* Résultats */}
       {results && (
-        <div style={{ background: 'var(--surface)', borderRadius: 8, padding: '1.5rem' }}>
+        <div className="card">
           <button onClick={() => saveAs(results.blob, results.filename)}
-            style={{ padding: '10px 24px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 'bold', fontSize: 14 }}>
+            className="btn success" style={{ fontSize: 14, padding: '10px 24px' }}>
             ⬇ Télécharger {results.filename}
           </button>
         </div>

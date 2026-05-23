@@ -18,6 +18,11 @@ export default function ObjectifsPage() {
 
   const log = (msg) => setLogs(p => [...p, msg]);
 
+  const handleDrop = (e, setter) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files[0];
+    if (f) setter(f);
+  };
 
   // ── Chargement CSV ──────────────────────────────
   const loadCSV = (file) => new Promise((res, rej) => {
@@ -266,7 +271,7 @@ export default function ObjectifsPage() {
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1rem' }}>
-      <h2 style={{ fontFamily: 'monospace', color: 'var(--accent)', marginBottom: '1.5rem' }}>
+      <h2 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', color: 'var(--accent)', marginBottom: '1.5rem' }}>
         OBJECTIFS CAMPRESJ
       </h2>
 
@@ -280,12 +285,12 @@ export default function ObjectifsPage() {
             onClick={() => ref.current.click()}
             onDragOver={e => e.preventDefault()}
             onDrop={e => { e.preventDefault(); setter(e.dataTransfer.files[0]); }}
-            style={{ border: `2px dashed ${file ? 'var(--accent)' : '#444'}`, borderRadius: 8, padding: '1.5rem', textAlign: 'center', cursor: 'pointer', background: 'var(--surface)' }}>
+            className={`drop-zone ${file ? 'has-file' : ''}`}>
             <input ref={ref} type="file" accept={accept} hidden onChange={e => setter(e.target.files[0])} />
             <div style={{ fontSize: 24, marginBottom: 8 }}>{accept === '.csv' ? '📋' : '📊'}</div>
-            <div style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--fg)' }}>{label}</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{sub}</div>
-            {file && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--accent)' }}>✓ {file.name}</div>}
+            <div className="drop-label">{label}</div>
+            <div className="drop-sub">{sub}</div>
+            {file && <div className="file-chip">✓ {file.name}</div>}
           </div>
         ))}
       </div>
@@ -295,38 +300,39 @@ export default function ObjectifsPage() {
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: 'var(--muted)' }}>
           Mois
           <input value={mois} onChange={e => setMois(e.target.value)}
-            style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #444', background: 'var(--surface)', color: 'var(--fg)', fontFamily: 'monospace', fontSize: 13 }} />
+            className="field-input" />
         </label>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: 'var(--muted)' }}>
           Taux objectif (%)
           <input type="number" value={taux} onChange={e => setTaux(Number(e.target.value))}
-            style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #444', background: 'var(--surface)', color: 'var(--fg)', fontFamily: 'monospace', fontSize: 13, width: 100 }} />
+            className="field-input" style={{ width: 100 }} />
         </label>
       </div>
 
       <button onClick={runPipeline} disabled={!csvFile || !recapFile || running}
-        style={{ padding: '10px 28px', background: running ? '#444' : 'var(--accent)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 'bold', fontSize: 14, marginBottom: '1.5rem' }}>
+        className="btn primary" style={{ fontSize: 14, padding: '11px 28px', marginBottom: '1.5rem' }}>
         {running ? '⏳ Génération...' : '▶ Générer les objectifs'}
       </button>
 
       {/* Logs */}
       {logs.length > 0 && (
-        <div style={{ background: '#111', borderRadius: 8, padding: '1rem', fontFamily: 'monospace', fontSize: 12, color: '#aaa', maxHeight: 240, overflowY: 'auto', marginBottom: '1rem', whiteSpace: 'pre-wrap' }}>
-          {logs.join('\n')}
+        <div className="log-console" style={{ marginBottom: '1rem' }}>
+          {logs.map((l, i) => <span key={i} className="log-line">{l}{'
+'}</span>)}
         </div>
       )}
 
       {/* Résultats */}
       {results && (
-        <div style={{ background: 'var(--surface)', borderRadius: 8, padding: '1.5rem' }}>
+        <div className="card">
           <button onClick={() => saveAs(results.blob, results.filename)}
-            style={{ padding: '10px 24px', background: '#27ae60', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 'bold', fontSize: 14, marginBottom: '1rem' }}>
+            className="btn success" style={{ fontSize: 14, padding: '10px 24px', marginBottom: '1rem' }}>
             ⬇ Télécharger {results.filename}
           </button>
           {results.missing.length > 0 && (
             <div style={{ marginTop: '1rem' }}>
-              <p style={{ color: '#e67e22', fontSize: 13, marginBottom: 8 }}>⚠️ Salles sans données CSV :</p>
-              <ul style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--muted)', paddingLeft: 20 }}>
+              <p style={{ color: 'var(--casino)', fontSize: 13, marginBottom: 8 }}>⚠️ Salles sans données CSV :</p>
+              <ul style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 12, color: 'var(--muted)', paddingLeft: 20 }}>
                 {results.missing.map(s => <li key={s}>{s}</li>)}
               </ul>
             </div>
