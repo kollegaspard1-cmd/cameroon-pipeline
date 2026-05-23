@@ -5,26 +5,29 @@ import ResultPage    from './pages/ResultPage';
 import HistoryPage   from './pages/HistoryPage';
 import ObjectifsPage from './pages/ObjectifsPage';
 import RapportsPage  from './pages/RapportsPage';
+import CMReportPage  from './pages/CMReportPage';
 import './App.css';
 
 const PAGES = [
   { id: 'upload',    label: 'Run Pipeline',  icon: '⚡', section: 'PIPELINE CM' },
   { id: 'result',    label: 'Results',       icon: '📊', section: null, requiresResult: true },
   { id: 'history',   label: 'History',       icon: '🕐', section: null },
+  { id: 'cmreport',  label: 'CM Daily Report', icon: '📝', section: 'RAPPORTS' },
   { id: 'objectifs', label: 'Objectifs',     icon: '🎯', section: 'CAMPRESJ' },
-  { id: 'rapports',  label: 'Rapports',      icon: '📈', section: null },
+  { id: 'rapports',  label: 'Réalisation',   icon: '📈', section: null },
 ];
 
 const PAGE_TITLES = {
   upload:    { title: 'Run Pipeline',               sub: 'Cameroon Daily Campaign Engine' },
   result:    { title: 'Pipeline Results',            sub: 'Download output files' },
   history:   { title: 'Run History',                 sub: 'Firebase-stored past runs' },
+  cmreport:  { title: 'CM Daily Report',             sub: 'Remplissage du template depuis les CSV' },
   objectifs: { title: 'Objectifs CAMPRESJ',          sub: 'Générer les objectifs mensuels' },
   rapports:  { title: 'Rapports Réalisation',        sub: 'Réalisé vs Objectif par super' },
 };
 
 export default function App() {
-  const [page, setPage]                   = useState('upload');
+  const [page, setPage]                     = useState('upload');
   const [pipelineResult, setPipelineResult] = useState(null);
 
   function handleResult(result) {
@@ -32,12 +35,10 @@ export default function App() {
     setPage('result');
   }
 
-  // Group pages by section
   let lastSection = null;
 
   return (
     <div className="app">
-      {/* ── Sidebar ── */}
       <aside className="sidebar">
         <div className="sidebar-brand">
           <div className="brand-logo">
@@ -55,7 +56,7 @@ export default function App() {
             return (
               <React.Fragment key={p.id}>
                 {showSection && (
-                  <div className="sidebar-section-label" style={{ marginTop: lastSection !== p.section ? '1.25rem' : 0 }}>
+                  <div className="sidebar-section-label" style={{ marginTop: '1.1rem' }}>
                     {p.section}
                   </div>
                 )}
@@ -73,7 +74,6 @@ export default function App() {
         </div>
       </aside>
 
-      {/* ── Main ── */}
       <div className="main-wrapper">
         <header className="topbar">
           <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -86,6 +86,7 @@ export default function App() {
           {page === 'upload'    && <UploadPage    onResult={handleResult} />}
           {page === 'result'    && <ResultPage    result={pipelineResult} />}
           {page === 'history'   && <HistoryPage   />}
+          {page === 'cmreport'  && <CMReportPage  />}
           {page === 'objectifs' && <ObjectifsPage />}
           {page === 'rapports'  && <RapportsPage  />}
         </main>
