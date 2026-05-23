@@ -92,6 +92,7 @@ export default function RapportsPage() {
           if (vs.some(v => v.toLowerCase().includes('tickets objectif'))) { hr = i; break; }
         }
         if (hr === null) throw new Error("Colonne 'Tickets Objectif' introuvable");
+        const headers = raw[hr].map(v => String(v).trim());
         
         const ocIdx  = headers.findIndex(h => h.toLowerCase().includes('tickets objectif'));
         const tc2025 = headers.findIndex(h => h.toLowerCase().includes('tickets') && !h.toLowerCase().includes('objectif') && h.includes('2025'));
@@ -129,11 +130,12 @@ export default function RapportsPage() {
           }
           if (hr === null) return;
           
+          const headers2 = raw[hr].map(v => String(v).trim().toUpperCase());
           const ci = {
-            ZONES: headers.findIndex(h => h === 'ZONES' || h === 'ZONE'),
-            SUPER: headers.findIndex(h => h.includes('SUPER EN CHARGE')),
-            SALLES: headers.findIndex(h => h === 'SALLES' || h === 'SALLE'),
-            TECH: headers.findIndex(h => h.includes('NOMS TECHNIQUE') || h.includes('NOM TECHNIQUE')),
+            ZONES: headers2.findIndex(h => h === 'ZONES' || h === 'ZONE'),
+            SUPER: headers2.findIndex(h => h.includes('SUPER EN CHARGE')),
+            SALLES: headers2.findIndex(h => h === 'SALLES' || h === 'SALLE'),
+            TECH: headers2.findIndex(h => h.includes('NOMS TECHNIQUE') || h.includes('NOM TECHNIQUE')),
           };
           if (Object.values(ci).some(v => v < 0)) return;
           const rows = []; let lastZone = '', lastSuper = '';
