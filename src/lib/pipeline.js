@@ -255,7 +255,7 @@ export function runPipeline(sheets, csvRows, onProgress, threshold = 2000, maxSp
   const today = new Date();
   const todayStr = format(today, 'yyyy-MM-dd');
   const endStr = format(addDays(today, 7), 'yyyy-MM-dd');
-  const SENTINEL = { account_id: 1326274 };
+
 
   const SENTINEL_ID = 1326274;
 
