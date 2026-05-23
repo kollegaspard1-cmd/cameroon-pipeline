@@ -92,7 +92,7 @@ export default function RapportsPage() {
           if (vs.some(v => v.toLowerCase().includes('tickets objectif'))) { hr = i; break; }
         }
         if (hr === null) throw new Error("Colonne 'Tickets Objectif' introuvable");
-        const headers = raw[hr].map(v => String(v).trim());
+        
         const ocIdx  = headers.findIndex(h => h.toLowerCase().includes('tickets objectif'));
         const tc2025 = headers.findIndex(h => h.toLowerCase().includes('tickets') && !h.toLowerCase().includes('objectif') && h.includes('2025'));
         const rows = [];
@@ -128,7 +128,7 @@ export default function RapportsPage() {
             if (vs.includes('ZONES') && vs.includes('SUPER EN CHARGE')) { hr = i; break; }
           }
           if (hr === null) return;
-          const headers = raw[hr].map(v => String(v).trim().toUpperCase());
+          
           const ci = {
             ZONES: headers.findIndex(h => h === 'ZONES' || h === 'ZONE'),
             SUPER: headers.findIndex(h => h.includes('SUPER EN CHARGE')),
