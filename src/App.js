@@ -1,12 +1,30 @@
 // src/App.js
 import React, { useState } from 'react';
-import UploadPage from './pages/UploadPage';
-import ResultPage from './pages/ResultPage';
-import HistoryPage from './pages/HistoryPage';
+import UploadPage    from './pages/UploadPage';
+import ResultPage    from './pages/ResultPage';
+import HistoryPage   from './pages/HistoryPage';
+import ObjectifsPage from './pages/ObjectifsPage';
+import RapportsPage  from './pages/RapportsPage';
 import './App.css';
 
+const PAGES = [
+  { id: 'upload',    label: 'Run Pipeline',  icon: '⚡', section: 'PIPELINE CM' },
+  { id: 'result',    label: 'Results',       icon: '📊', section: null, requiresResult: true },
+  { id: 'history',   label: 'History',       icon: '🕐', section: null },
+  { id: 'objectifs', label: 'Objectifs',     icon: '🎯', section: 'CAMPRESJ' },
+  { id: 'rapports',  label: 'Rapports',      icon: '📈', section: null },
+];
+
+const PAGE_TITLES = {
+  upload:    { title: 'Run Pipeline',               sub: 'Cameroon Daily Campaign Engine' },
+  result:    { title: 'Pipeline Results',            sub: 'Download output files' },
+  history:   { title: 'Run History',                 sub: 'Firebase-stored past runs' },
+  objectifs: { title: 'Objectifs CAMPRESJ',          sub: 'Générer les objectifs mensuels' },
+  rapports:  { title: 'Rapports Réalisation',        sub: 'Réalisé vs Objectif par super' },
+};
+
 export default function App() {
-  const [page, setPage] = useState('upload');  // 'upload' | 'result' | 'history'
+  const [page, setPage]                   = useState('upload');
   const [pipelineResult, setPipelineResult] = useState(null);
 
   function handleResult(result) {
@@ -14,47 +32,64 @@ export default function App() {
     setPage('result');
   }
 
+  // Group pages by section
+  let lastSection = null;
+
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-inner">
-          <div className="brand">
+      {/* ── Sidebar ── */}
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-logo">
             <span className="brand-dot" />
             <span className="brand-name">Pipeline CM</span>
-            <span className="brand-sub">Cameroon Daily Campaign Engine</span>
           </div>
-          <nav className="nav">
-            <button
-              className={`nav-btn ${page === 'upload' ? 'active' : ''}`}
-              onClick={() => setPage('upload')}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Run Pipeline
-            </button>
-            <button
-              className={`nav-btn ${page === 'result' ? 'active' : ''}`}
-              onClick={() => setPage('result')}
-              disabled={!pipelineResult}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
-              Results
-            </button>
-            <button
-              className={`nav-btn ${page === 'history' ? 'active' : ''}`}
-              onClick={() => setPage('history')}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              History
-            </button>
-          </nav>
+          <div className="brand-sub">Cameroon Operations</div>
         </div>
-      </header>
 
-      <main className="main">
-        {page === 'upload'  && <UploadPage  onResult={handleResult} />}
-        {page === 'result'  && <ResultPage  result={pipelineResult} />}
-        {page === 'history' && <HistoryPage />}
-      </main>
+        <div className="sidebar-section">
+          {PAGES.map(p => {
+            const showSection = p.section && p.section !== lastSection;
+            if (showSection) lastSection = p.section;
+            const disabled = p.requiresResult && !pipelineResult;
+            return (
+              <React.Fragment key={p.id}>
+                {showSection && (
+                  <div className="sidebar-section-label" style={{ marginTop: lastSection !== p.section ? '1.25rem' : 0 }}>
+                    {p.section}
+                  </div>
+                )}
+                <button
+                  className={`nav-btn ${page === p.id ? 'active' : ''}`}
+                  onClick={() => !disabled && setPage(p.id)}
+                  disabled={disabled}
+                >
+                  <span className="nav-icon">{p.icon}</span>
+                  {p.label}
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </aside>
+
+      {/* ── Main ── */}
+      <div className="main-wrapper">
+        <header className="topbar">
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span className="topbar-title">{PAGE_TITLES[page]?.title}</span>
+            <span className="topbar-sub">— {PAGE_TITLES[page]?.sub}</span>
+          </div>
+        </header>
+
+        <main className="main">
+          {page === 'upload'    && <UploadPage    onResult={handleResult} />}
+          {page === 'result'    && <ResultPage    result={pipelineResult} />}
+          {page === 'history'   && <HistoryPage   />}
+          {page === 'objectifs' && <ObjectifsPage />}
+          {page === 'rapports'  && <RapportsPage  />}
+        </main>
+      </div>
     </div>
   );
 }
