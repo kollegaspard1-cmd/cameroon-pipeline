@@ -83,8 +83,9 @@ export default function CMReportPage() {
 
     // ── Cell setter ────────────────────────────────
     const cv = (addr, v, font, align, border, fill, fmt) => {
+      const val = v ?? '';
       ws[addr] = {
-        v: v ?? '', t: typeof v === 'number' ? 'n' : 's',
+        v: val, t: typeof val === 'number' ? 'n' : 's',
         s: { font, alignment: align||aCtr, border: border||{}, fill: fill||NONE }
       };
       if (fmt) ws[addr].z = fmt;
@@ -186,7 +187,7 @@ export default function CMReportPage() {
     // ── Rows 23-27: Losses data ────────────────────
     for (let i=0; i<5; i++) {
       const r = 23+i, p = losses[i];
-      cv(`B${r}`, p?p.id:'',   fBoldMd, aCtr, {}, NONE);
+      cv(`B${r}`, p?String(p.id):'', fBoldMd, aCtr, {}, NONE);
       cv(`C${r}`, p?p.name:'', fBoldMd, aCtr, {}, NONE);
       cv(`D${r}`, p?Math.round(p.gross*100)/100:'', fBoldMd, aCtr, {bottom:hair,left:hair,right:hair}, NONE, '#,##0.00');
       cv(`E${r}`, p?p.type:'', fBoldMd, aCtr, {}, NONE);
@@ -208,7 +209,7 @@ export default function CMReportPage() {
     // ── Rows 31-35: Wins data (pink bg) ────────────
     for (let i=0; i<5; i++) {
       const r = 31+i, p = wins[i];
-      cv(`B${r}`, p?p.id:'',   fBoldMd, aCtr, {}, PINK);
+      cv(`B${r}`, p?String(p.id):'', fBoldMd, aCtr, {}, PINK);
       cv(`C${r}`, p?p.name:'', fBoldMd, aCtr, {}, PINK);
       cv(`D${r}`, p?Math.round(p.gross*100)/100:'', fBoldMd, aCtr, {top:hair,bottom:hair,left:hair,right:hair}, PINK, '#,##0.00');
       cv(`E${r}`, p?p.type:'', fBoldMd, aCtr, {}, PINK);
