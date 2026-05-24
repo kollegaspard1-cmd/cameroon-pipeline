@@ -11,7 +11,7 @@ const C = {
 };
 const FMT_NB='#,##0', FMT_DIF='#,##0;[Red]-#,##0';
 
-function bdr() { const t={style:'thin',color:{rgb:'BFBFBF'}}; return {top:t,bottom:t,left:t,right:t}; }
+function bdr() { const t={style:'thin',color:{argb:'FFBFBFBF'}}; return {top:t,bottom:t,left:t,right:t}; }
 function fill(rgb) { return {patternType:'solid',fgColor:{rgb}}; }
 function fnt(bold=false,sz=10,rgb='000000') { return {name:'Arial',bold,sz,color:{rgb}}; }
 function aln(h='center',v='center',wrap=false) { return {horizontal:h,vertical:v,wrapText:wrap}; }

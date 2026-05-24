@@ -14,7 +14,7 @@ const C = {
 const FMT_NB='#,##0', FMT_DIF='#,##0;[Red]-#,##0', FMT_PCT='0.0"%"';
 
 function bdr() {
-  const t = { style:'thin', color:{ rgb:'BFBFBF' } };
+  const t = { style:'thin', color:{ argb:'FFBFBFBF' } };
   return { top:t, bottom:t, left:t, right:t };
 }
 function fill(rgb) { return { patternType:'solid', fgColor:{ rgb } }; }
@@ -48,7 +48,7 @@ function titleStyle(bg) {
   return { font:fnt(true,13,'FFFFFF'), fill:fill(bg), alignment:aln('center','center') };
 }
 function sectionStyle(bg) {
-  return { font:fnt(true,11,'FFFFFF'), fill:fill(bg), border:{ top:{style:'medium',color:{rgb:'404040'}}, bottom:{style:'medium',color:{rgb:'404040'}}, left:{style:'medium',color:{rgb:'404040'}}, right:{style:'medium',color:{rgb:'404040'}} }, alignment:aln('center','center') };
+  return { font:fnt(true,11,'FFFFFF'), fill:fill(bg), border:{ top:{style:'medium',color:{argb:'FF404040'}}, bottom:{style:'medium',color:{argb:'FF404040'}}, left:{style:'medium',color:{argb:'FF404040'}}, right:{style:'medium',color:{argb:'FF404040'}} }, alignment:aln('center','center') };
 }
 
 // ── Prep dataframe ────────────────────────────────

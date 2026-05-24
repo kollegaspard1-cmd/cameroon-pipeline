@@ -66,7 +66,7 @@ export default function ObjectifsPage() {
 
   // ── Styles ──────────────────────────────────────
   function bdr() {
-    const t = { style: 'thin', color: { rgb: 'BFBFBF' } };
+    const t = { style: 'thin', color: { argb: 'FFBFBFBF' } };
     return { top: t, bottom: t, left: t, right: t };
   }
   function fill(rgb) { return { patternType: 'solid', fgColor: { rgb } }; }
@@ -99,7 +99,7 @@ export default function ObjectifsPage() {
   const buildSheet = (rowsData, csvLookup, sheetTitle, moisLabel) => {
     const ws = {};
     const nRows = rowsData.length;
-    
+    const lastDataRow = 4 + nRows; // row 5 = first data, last data = 4+nRows
     const totalRow    = 5 + nRows;
 
     // Row 2 — Title (merged A2:F2)
