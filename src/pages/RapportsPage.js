@@ -1,6 +1,6 @@
 // src/pages/RapportsPage.js
 import React, { useState, useRef } from 'react';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 

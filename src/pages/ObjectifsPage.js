@@ -1,7 +1,7 @@
 // src/pages/ObjectifsPage.js
 import React, { useState, useRef } from 'react';
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 
@@ -17,7 +17,6 @@ export default function ObjectifsPage() {
   const recapRef = useRef();
 
   const log = (msg) => setLogs(p => [...p, msg]);
-
 
   // ── Chargement CSV ──────────────────────────────
   const loadCSV = (file) => new Promise((res, rej) => {
@@ -52,12 +51,7 @@ export default function ObjectifsPage() {
           for (let i = 2; i < rows.length; i++) {
             const [zone, sup, sd, st] = rows[i];
             if (zone && sup && sd && st && sup !== 'SUPER EN CHARGE') {
-              data.push([
-                String(zone).trim(),
-                String(sup).trim(),
-                String(sd).trim(),
-                String(st).trim()
-              ]);
+              data.push([String(zone).trim(), String(sup).trim(), String(sd).trim(), String(st).trim()]);
             }
           }
           zoneData[sheet] = data;
@@ -71,187 +65,151 @@ export default function ObjectifsPage() {
   });
 
   // ── Styles ──────────────────────────────────────
-  const STYLES = {
-    HEADER:  { font: { name: 'Calibri', bold: true, sz: 10, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F3864' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: bdr() },
-    GREEN:   { font: { name: 'Calibri', bold: true, sz: 10, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '375623' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: bdr() },
-    RED:     { font: { name: 'Calibri', bold: true, sz: 10, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '7B2C2C' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: bdr() },
-    BLUE:    { font: { name: 'Calibri', bold: true, sz: 10, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F4E79' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: bdr() },
-    ZONE_H:  { font: { name: 'Calibri', bold: true, sz: 9,  color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '2E75B6' } }, border: bdr() },
-    TOTAL:   { font: { name: 'Calibri', bold: true, sz: 10 }, fill: { fgColor: { rgb: 'D9D9D9' } }, border: bdr() },
-    ALT:     { font: { name: 'Calibri', sz: 9 }, fill: { fgColor: { rgb: 'EBF3FB' } }, border: bdr() },
-    WHITE:   { font: { name: 'Calibri', sz: 9 }, fill: { fgColor: { rgb: 'FFFFFF' } }, border: bdr() },
-  };
-
   function bdr() {
     const t = { style: 'thin', color: { rgb: 'BFBFBF' } };
     return { top: t, bottom: t, left: t, right: t };
   }
+  function fill(rgb) { return { patternType: 'solid', fgColor: { rgb } }; }
+  function fnt(bold, sz, rgb) { return { name: 'Calibri', bold, sz: sz||10, color: { rgb: rgb||'000000' } }; }
+  function aln(h, wrap) { return { horizontal: h||'left', vertical: 'center', wrapText: !!wrap }; }
 
-  function sc(ws, r, c, v, style, numFmt) {
-    const addr = XLSX.utils.encode_cell({ r: r - 1, c: c - 1 });
-    ws[addr] = { v, t: typeof v === 'number' ? 'n' : 's', s: style };
-    if (numFmt) ws[addr].z = numFmt;
+  const HDR_DARK  = { font: fnt(true,10,'FFFFFF'), fill: fill('1F3864'), border: bdr(), alignment: aln('center', true) };
+  const HDR_GREEN = { font: fnt(true,10,'FFFFFF'), fill: fill('375623'), border: bdr(), alignment: aln('center', true) };
+  const HDR_RED   = { font: fnt(true,10,'FFFFFF'), fill: fill('7B2C2C'), border: bdr(), alignment: aln('center', true) };
+  const HDR_BLUE  = { font: fnt(true,10,'FFFFFF'), fill: fill('1F4E79'), border: bdr(), alignment: aln('center', true) };
+
+  // Data row styles — alternating white/light-blue
+  // Cols C and F always light-blue (EBF3FB) + bold
+  function rowStyle(colIdx, rowIsEven) {
+    // colIdx: 0=A, 1=B, 2=C, 3=D, 4=E, 5=F
+    const isObjCol = colIdx === 2 || colIdx === 5; // C or F
+    const bg = isObjCol ? 'EBF3FB' : (rowIsEven ? 'EBF3FB' : 'FFFFFF');
+    const bold = isObjCol;
+    return { font: fnt(bold, 10, '000000'), fill: fill(bg), border: bdr(), alignment: aln('right') };
   }
+  function nameStyle(rowIsEven) {
+    const bg = rowIsEven ? 'EBF3FB' : 'FFFFFF';
+    return { font: fnt(false, 10, '000000'), fill: fill(bg), border: bdr(), alignment: aln('left') };
+  }
+  const TOTAL_STYLE = { font: fnt(true, 10, '000000'), fill: fill('D9D9D9'), border: bdr(), alignment: aln('right') };
+  const TOTAL_NAME  = { font: fnt(true, 10, '000000'), fill: fill('D9D9D9'), border: bdr(), alignment: aln('left') };
+  const TITLE_STYLE = { font: fnt(true, 11, 'FFFFFF'), fill: fill('1F3864'), border: bdr(), alignment: aln('left') };
 
-  // ── Construction d'un onglet ─────────────────────
-  const buildSheet = (rowsData, csvLookup, titleText, hasZone = true, hasSuper = true) => {
+  // ── Build sheet matching exact template ──────────
+  const buildSheet = (rowsData, csvLookup, sheetTitle, moisLabel) => {
     const ws = {};
-    const moisLabel = titleText.includes('·') ? titleText.split('·')[1].trim() : 'MOIS';
+    const nRows = rowsData.length;
+    const lastDataRow = 4 + nRows; // row 5 = first data, last data = 4+nRows
+    const totalRow    = 5 + nRows;
 
-    const colDefs = [];
-    if (hasZone)  colDefs.push({ h: 'ZONE',                            s: STYLES.HEADER, w: 14 });
-    if (hasSuper) colDefs.push({ h: 'SUPER EN CHARGE',                 s: STYLES.HEADER, w: 22 });
-    colDefs.push(
-      { h: 'SALLE',                                  s: STYLES.HEADER, w: 28 },
-      { h: 'NOM TECHNIQUE',                          s: STYLES.HEADER, w: 18 },
-      { h: `Payin ${moisLabel} (FCFA)`,              s: STYLES.GREEN,  w: 22 },
-      { h: `Payin Objectif +${taux}%`,               s: STYLES.HEADER, w: 26 },
-      { h: `GGR ${moisLabel} (FCFA)`,                s: STYLES.RED,    w: 20 },
-      { h: `Tickets ${moisLabel}`,                   s: STYLES.BLUE,   w: 16 },
-      { h: `Tickets Objectif +${taux}%`,             s: STYLES.HEADER, w: 24 },
-    );
-    const ncols = colDefs.length;
+    // Row 2 — Title (merged A2:F2)
+    const titleText = `${sheetTitle}  ·  ${moisLabel.toUpperCase()}  ·  ${nRows} salles`;
+    ws['A2'] = { v: titleText, t: 's', s: TITLE_STYLE };
+    for (let c = 1; c < 6; c++) {
+      const addr = XLSX.utils.encode_cell({ r: 1, c });
+      ws[addr] = { v: '', t: 's', s: TITLE_STYLE };
+    }
 
-    // Titre row 2
-    const titleAddr = XLSX.utils.encode_cell({ r: 1, c: 0 });
-    ws[titleAddr] = { v: titleText, t: 's', s: { font: { name: 'Calibri', bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F3864' } }, alignment: { horizontal: 'left', vertical: 'center' } } };
-    ws['!merges'] = [{ s: { r: 1, c: 0 }, e: { r: 1, c: ncols - 1 } }];
+    // Row 3 — empty
 
-    // Headers row 4
-    colDefs.forEach((cd, i) => {
-      const addr = XLSX.utils.encode_cell({ r: 3, c: i });
-      ws[addr] = { v: cd.h, t: 's', s: cd.s };
-    });
+    // Row 4 — Headers (height 42)
+    ws['A4'] = { v: 'Salle', t: 's', s: HDR_DARK };
+    ws['B4'] = { v: `Payin ${moisLabel} (FCFA)`, t: 's', s: HDR_GREEN };
+    ws['C4'] = { v: `Payin Objectif (${moisLabel}) +${taux}% (FCFA) `, t: 's', s: HDR_DARK };
+    ws['D4'] = { v: `GGR ${moisLabel} (FCFA)`, t: 's', s: HDR_RED };
+    ws['E4'] = { v: `Tickets ${moisLabel}`, t: 's', s: HDR_BLUE };
+    ws['F4'] = { v: `Tickets Objectif (${moisLabel}) +${taux}%`, t: 's', s: HDR_DARK };
 
-    // Données
-    let dataRow = 4; // 0-based = row 5
-    let prevGroup = null;
-    let totalPayin = 0, totalPayinObj = 0, totalGross = 0, totalTickets = 0, totalTicketsObj = 0;
+    // Data rows starting at row 5
     const missing = [];
-    const pCol = colDefs.findIndex(c => c.h.startsWith('Payin') && !c.h.includes('Objectif'));
+    const sumB = []; const sumD = []; const sumE = [];
 
-    rowsData.forEach(([ zone, sup, sd, st ], i) => {
-      const groupKey = hasSuper ? `${zone}|${sup}` : zone;
-      if (groupKey !== prevGroup) {
-        const label = hasSuper && hasZone ? `── ${zone}  ·  ${sup}` : hasZone ? `── ${zone}` : `── ${sup}`;
-        for (let c = 0; c < ncols; c++) {
-          const addr = XLSX.utils.encode_cell({ r: dataRow, c });
-          ws[addr] = { v: c === 0 ? label : '', t: 's', s: STYLES.ZONE_H };
-        }
-        dataRow++; prevGroup = groupKey;
-      }
-
-      const rowStyle = i % 2 === 0 ? STYLES.ALT : STYLES.WHITE;
-      let col = 0;
-      if (hasZone)  { sc(ws, dataRow + 1, col + 1, zone, rowStyle); col++; }
-      if (hasSuper) { sc(ws, dataRow + 1, col + 1, sup,  rowStyle); col++; }
-      sc(ws, dataRow + 1, col + 1, sd, rowStyle); col++;
-      sc(ws, dataRow + 1, col + 1, st, rowStyle); col++;
-
+    rowsData.forEach(([zone, sup, sd, st], i) => {
+      const rowNum = 5 + i;
+      const even   = i % 2 === 0;
       const csvRow = csvLookup[st.toLowerCase()];
-      if (csvRow) {
-        const payin      = parseFloat(csvRow['Payin money']) || 0;
-        const tickets    = parseFloat(csvRow['Payin count']) || 0;
-        const gross      = parseFloat(csvRow['Gross'])       || 0;
-        const payinObj   = Math.round(payin * (1 + taux / 100));
-        const ticketsObj = Math.round(tickets * (1 + taux / 100));
-        totalPayin += payin; totalPayinObj += payinObj;
-        totalGross += gross; totalTickets += tickets; totalTicketsObj += ticketsObj;
 
-        sc(ws, dataRow + 1, col + 1, payin,      rowStyle, '#,##0');    col++;
-        sc(ws, dataRow + 1, col + 1, payinObj,   STYLES.ALT, '#,##0'); col++;
-        sc(ws, dataRow + 1, col + 1, gross,      rowStyle, '#,##0.00'); col++;
-        sc(ws, dataRow + 1, col + 1, tickets,    rowStyle, '#,##0');    col++;
-        sc(ws, dataRow + 1, col + 1, ticketsObj, STYLES.ALT, '#,##0');
-      } else {
-        missing.push(st);
-      }
-      dataRow++;
+      const payin   = csvRow ? parseFloat(csvRow['Payin money'])  || 0 : 0;
+      const ggr     = csvRow ? parseFloat(csvRow['Gross'])        || 0 : 0;
+      const tickets = csvRow ? parseFloat(csvRow['Payin count'])  || 0 : 0;
+      if (!csvRow) missing.push(st);
+
+      sumB.push(rowNum); sumD.push(rowNum); sumE.push(rowNum);
+
+      ws[`A${rowNum}`] = { v: sd, t: 's', s: nameStyle(even) };
+      ws[`B${rowNum}`] = { v: payin, t: 'n', s: rowStyle(1, even), z: '#,##0' };
+      // C — formula
+      ws[`C${rowNum}`] = { f: `B${rowNum}+((B${rowNum}*${taux}%)/100)`, t: 'n', s: rowStyle(2, even), z: '#,##0' };
+      ws[`D${rowNum}`] = { v: ggr, t: 'n', s: rowStyle(3, even), z: '#,##0.00' };
+      ws[`E${rowNum}`] = { v: tickets, t: 'n', s: rowStyle(4, even), z: '#,##0' };
+      // F — formula
+      ws[`F${rowNum}`] = { f: `ROUND(E${rowNum}*${1 + taux/100},0)`, t: 'n', s: rowStyle(5, even), z: '#,##0' };
     });
 
-    // Ligne TOTAL
-    const mergeEnd = pCol - 1;
-    if (!ws['!merges']) ws['!merges'] = [];
-    ws['!merges'].push({ s: { r: dataRow, c: 0 }, e: { r: dataRow, c: mergeEnd } });
-    const totalAddr = XLSX.utils.encode_cell({ r: dataRow, c: 0 });
-    ws[totalAddr] = { v: `TOTAL  (${rowsData.length} salles)`, t: 's', s: STYLES.TOTAL };
-    [
-      [pCol,     totalPayin,            '#,##0'],
-      [pCol + 1, totalPayinObj,         '#,##0'],
-      [pCol + 2, Math.round(totalGross * 100) / 100, '#,##0.00'],
-      [pCol + 3, totalTickets,          '#,##0'],
-      [pCol + 4, totalTicketsObj,       '#,##0'],
-    ].forEach(([c, v, fmt]) => {
-      const addr = XLSX.utils.encode_cell({ r: dataRow, c });
-      ws[addr] = { v, t: 'n', s: STYLES.TOTAL, z: fmt };
-    });
+    // Total row
+    const firstData = 5, lastData = 4 + nRows;
+    ws[`A${totalRow}`] = { v: `TOTAL  (${nRows} salles)`, t: 's', s: TOTAL_NAME };
+    ws[`B${totalRow}`] = { f: `SUM(B${firstData}:B${lastData})`, t: 'n', s: TOTAL_STYLE, z: '#,##0' };
+    ws[`C${totalRow}`] = { f: `B${totalRow}+((B${totalRow}*${taux}%)/100)`, t: 'n', s: TOTAL_STYLE, z: '#,##0' };
+    ws[`D${totalRow}`] = { f: `SUM(D${firstData}:D${lastData})`, t: 'n', s: TOTAL_STYLE, z: '#,##0.00' };
+    ws[`E${totalRow}`] = { f: `SUM(E${firstData}:E${lastData})`, t: 'n', s: TOTAL_STYLE, z: '#,##0' };
+    ws[`F${totalRow}`] = { f: `SUM(F${firstData}:F${lastData})`, t: 'n', s: TOTAL_STYLE, z: '#,##0' };
 
-    ws['!cols'] = colDefs.map(cd => ({ wch: cd.w }));
-    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: dataRow, c: ncols - 1 } });
+    // Merges & dims
+    ws['!merges'] = [{ s: { r: 1, c: 0 }, e: { r: 1, c: 5 } }];
+    ws['!cols'] = [30, 24, 32, 22, 20, 26].map(w => ({ wch: w }));
+    ws['!rows'] = [
+      {},         // row 1
+      { hpt: 20 }, // row 2 title
+      {},         // row 3
+      { hpt: 42 }, // row 4 headers
+      ...Array(nRows + 1).fill({}),
+    ];
+    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: totalRow - 1, c: 5 } });
+
     return { ws, missing };
   };
 
-  // ── Pipeline principal ───────────────────────────
+  // ── Pipeline ─────────────────────────────────────
   const runPipeline = async () => {
     setRunning(true); setLogs([]); setResults(null);
     try {
-      const moisUp   = mois.toUpperCase();
-      const moisSafe = moisUp.replace(/ /g, '');
+      const moisUp = mois.toUpperCase();
+      const moisSafe = moisUp.replace(/ /g, '_');
+      const moisLabel = moisUp; // e.g. "AVRIL 2026"
 
       log('📂 Chargement des fichiers...');
       const [csvLookup, zoneData] = await Promise.all([loadCSV(csvFile), loadRecap(recapFile)]);
 
       const allZones = Object.keys(zoneData);
       const allRows  = allZones.flatMap(z => zoneData[z]);
-      const superZones = ['YAOUNDE', 'DOUALA', 'OUEST'].filter(z => allZones.includes(z));
 
       log(`\n📋 ${allZones.length} zones · ${allRows.length} salles au total`);
 
       const zip = new JSZip();
       const allMissing = [];
 
-      // 1. GLOBAL
+      // Global
       log('🌍 Génération GLOBAL...');
-      const { ws: wsG, missing: mG } = buildSheet(allRows, csvLookup,
-        `OBJECTIFS CAMPRESJ — ${moisUp}  ·  GLOBAL  ·  ${allRows.length} salles`);
+      const sheetTitle = `OBJECTIFS CAMPRESJ — ${moisUp}`;
+      const { ws: wsG, missing: mG } = buildSheet(allRows, csvLookup, sheetTitle, moisLabel);
       allMissing.push(...mG);
       const wbG = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wbG, wsG, 'GLOBAL');
+      const sheetName = `OBJECTIFS CAMPRESJ — ${moisUp}`.slice(0, 31);
+      XLSX.utils.book_append_sheet(wbG, wsG, sheetName);
       zip.file(`${moisSafe}_GLOBAL.xlsx`, XLSX.write(wbG, { bookType: 'xlsx', type: 'array' }));
-      log(`  ✅ ${moisSafe}_GLOBAL.xlsx`);
+      log(`  ✅ ${moisSafe}_GLOBAL.xlsx (${allRows.length} salles)`);
 
-      // 2. Par zone
+      // Par zone
       log('🗺️  Génération par zone...');
       for (const zoneName of allZones) {
         const rows = zoneData[zoneName];
-        const { ws, missing } = buildSheet(rows, csvLookup,
-          `OBJECTIFS CAMPRESJ — ${moisUp}  ·  ${zoneName}  ·  ${rows.length} salles`);
+        const { ws, missing } = buildSheet(rows, csvLookup, `OBJECTIFS CAMPRESJ — ${moisUp}  ·  ${zoneName}`, moisLabel);
         allMissing.push(...missing);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, zoneName.slice(0, 31));
         zip.file(`${moisSafe}_ZONE_${zoneName}.xlsx`, XLSX.write(wb, { bookType: 'xlsx', type: 'array' }));
-        log(`  ✅ ${moisSafe}_ZONE_${zoneName}.xlsx  (${rows.length} salles)`);
-      }
-
-      // 3. Par super
-      log('👤 Génération par super...');
-      for (const zoneName of superZones) {
-        const supers = {};
-        zoneData[zoneName].forEach(r => {
-          if (!supers[r[1]]) supers[r[1]] = [];
-          supers[r[1]].push(r);
-        });
-        for (const [sup, rows] of Object.entries(supers)) {
-          const { ws, missing } = buildSheet(rows, csvLookup,
-            `OBJECTIFS ${moisUp}  ·  ${zoneName}  ·  ${sup}  ·  ${rows.length} salles`,
-            true, false);
-          allMissing.push(...missing);
-          const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, sup.slice(0, 31));
-          const safeSup = sup.replace(/ /g, '_').replace(/\//g, '-');
-          zip.file(`${moisSafe}_${zoneName}_${safeSup}.xlsx`, XLSX.write(wb, { bookType: 'xlsx', type: 'array' }));
-          log(`  ✅ ${moisSafe}_${zoneName}_${safeSup}.xlsx`);
-        }
+        log(`  ✅ ${moisSafe}_ZONE_${zoneName}.xlsx (${rows.length} salles)`);
       }
 
       const blob = await zip.generateAsync({ type: 'blob' });
@@ -265,24 +223,20 @@ export default function ObjectifsPage() {
   };
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1rem' }}>
-      <h2 style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', color: 'var(--accent)', marginBottom: '1.5rem' }}>
-        OBJECTIFS CAMPRESJ
-      </h2>
-
+    <div>
       {/* Upload */}
+      <p className="section-label">Fichiers source</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
         {[
-          { label: 'shift_report_summary.csv', sub: 'Colonnes : Betshop name · Payin money · Payin count · Gross', ref: csvRef, setter: setCsvFile, file: csvFile, accept: '.csv' },
-          { label: 'RECAP_DES_SALLES_PAR_ZONE.xlsx', sub: 'Colonnes : Zone · Super en charge · Salle · Nom technique', ref: recapRef, setter: setRecapFile, file: recapFile, accept: '.xlsx' },
-        ].map(({ label, sub, ref, setter, file, accept }) => (
-          <div key={label}
-            onClick={() => ref.current.click()}
+          { label: 'shift_report_summary.csv', sub: 'Colonnes : Betshop name · Payin money · Payin count · Gross', ref: csvRef, setter: setCsvFile, file: csvFile, accept: '.csv', icon: '📋' },
+          { label: 'RECAP_DES_SALLES_PAR_ZONE.xlsx', sub: 'Colonnes : Zone · Super · Salle · Nom technique', ref: recapRef, setter: setRecapFile, file: recapFile, accept: '.xlsx', icon: '📊' },
+        ].map(({ label, sub, ref, setter, file, accept, icon }) => (
+          <div key={label} onClick={() => ref.current.click()}
             onDragOver={e => e.preventDefault()}
             onDrop={e => { e.preventDefault(); setter(e.dataTransfer.files[0]); }}
             className={`drop-zone ${file ? 'has-file' : ''}`}>
             <input ref={ref} type="file" accept={accept} hidden onChange={e => setter(e.target.files[0])} />
-            <div style={{ fontSize: 24, marginBottom: 8 }}>{accept === '.csv' ? '📋' : '📊'}</div>
+            <div className="drop-icon">{icon}</div>
             <div className="drop-label">{label}</div>
             <div className="drop-sub">{sub}</div>
             {file && <div className="file-chip">✓ {file.name}</div>}
@@ -291,29 +245,33 @@ export default function ObjectifsPage() {
       </div>
 
       {/* Paramètres */}
-      <div style={{ display: 'flex', gap: '2rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: 'var(--muted)' }}>
-          Mois
-          <input value={mois} onChange={e => setMois(e.target.value)}
-            className="field-input" />
-        </label>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: 'var(--muted)' }}>
-          Taux objectif (%)
-          <input type="number" value={taux} onChange={e => setTaux(Number(e.target.value))}
-            className="field-input" style={{ width: 100 }} />
-        </label>
+      <div className="card" style={{ marginBottom: '1.25rem' }}>
+        <p className="section-label">Paramètres</p>
+        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Mois</span>
+            <input value={mois} onChange={e => setMois(e.target.value)} className="field-input" />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Taux objectif (%)</span>
+            <input type="number" value={taux} onChange={e => setTaux(Number(e.target.value))} className="field-input" style={{ width: 100 }} />
+          </label>
+        </div>
       </div>
 
       <button onClick={runPipeline} disabled={!csvFile || !recapFile || running}
         className="btn primary" style={{ fontSize: 14, padding: '11px 28px', marginBottom: '1.5rem' }}>
-        {running ? '⏳ Génération...' : '▶ Générer les objectifs'}
+        {running ? '⟳ Génération...' : '▶  Générer les objectifs'}
       </button>
 
       {/* Logs */}
       {logs.length > 0 && (
-        <div className="log-console" style={{ marginBottom: '1rem' }}>
-          {logs.map((l, i) => <span key={i} className="log-line" style={{display:'block'}}>{l}</span>)}
-        </div>
+        <>
+          <p className="section-label">Console</p>
+          <div className="log-console" style={{ marginBottom: '1.5rem' }}>
+            {logs.map((l, i) => <span key={i} className="log-line" style={{ display: 'block' }}>{l}</span>)}
+          </div>
+        </>
       )}
 
       {/* Résultats */}
@@ -321,12 +279,14 @@ export default function ObjectifsPage() {
         <div className="card">
           <button onClick={() => saveAs(results.blob, results.filename)}
             className="btn success" style={{ fontSize: 14, padding: '10px 24px', marginBottom: '1rem' }}>
-            ⬇ Télécharger {results.filename}
+            ⬇  Télécharger {results.filename}
           </button>
           {results.missing.length > 0 && (
             <div style={{ marginTop: '1rem' }}>
-              <p style={{ color: 'var(--casino)', fontSize: 13, marginBottom: 8 }}>⚠️ Salles sans données CSV :</p>
-              <ul style={{ fontFamily: 'Plus Jakarta Sans, sans-serif', fontSize: 12, color: 'var(--muted)', paddingLeft: 20 }}>
+              <p style={{ color: 'var(--casino)', fontSize: 13, marginBottom: 8, fontWeight: 600 }}>
+                ⚠️ {results.missing.length} salle(s) sans données CSV :
+              </p>
+              <ul style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--muted)', paddingLeft: 20 }}>
                 {results.missing.map(s => <li key={s}>{s}</li>)}
               </ul>
             </div>

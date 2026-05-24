@@ -23,7 +23,7 @@ const NAV = [
   {
     section: 'Rapports',
     items: [
-      { id: 'cmreport',    label: 'CM Daily Report', icon: '📝' },
+      { id: 'cmreport',    label: 'Daily Sport Report', icon: '📝' },
     ]
   },
   {
@@ -55,7 +55,7 @@ const TITLES = {
   upload:            { title: 'Run Pipeline',          sub: 'Cameroon Daily Campaign Engine' },
   result:            { title: 'Pipeline Results',       sub: 'Download output files' },
   history:           { title: 'Run History',            sub: 'Firebase-stored past runs' },
-  cmreport:          { title: 'CM Daily Report',        sub: 'Remplissage du template depuis les CSV' },
+  cmreport:          { title: 'Daily Sport Report',      sub: 'Remplissage du template depuis les CSV' },
   objectifs:         { title: 'Objectifs CAMPRESJ',     sub: 'Générer les objectifs mensuels' },
   rapports:          { title: 'Rapports Réalisation',   sub: 'Réalisé vs Objectif par super' },
   'betshop-marches': { title: 'Betshop — Par Marché',   sub: 'Fichiers par marché + CAMPRESJ + Global' },

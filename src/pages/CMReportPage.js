@@ -1,6 +1,6 @@
 // src/pages/CMReportPage.js
 import React, { useState, useRef } from 'react';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import Papa from 'papaparse';
 import { saveAs } from 'file-saver';
 
@@ -19,7 +19,6 @@ export default function CMReportPage() {
 
   const setFile = (key, f) => setFiles(p => ({ ...p, [key]: f }));
 
-  // ── CSV loader ───────────────────────────────────
   const loadCSV = (file) => new Promise((res, rej) => {
     Papa.parse(file, {
       header: true, skipEmptyLines: true, dynamicTyping: true,
@@ -28,15 +27,12 @@ export default function CMReportPage() {
     });
   });
 
-  // ── Compute KPIs ─────────────────────────────────
   const computeKPIs = (t1, t2, a1, a2) => {
     const newIdsYest = new Set(a1.map(r => r['Account ID']));
     const newIdsMTD  = new Set(a2.map(r => r['Account ID']));
     const t1New = t1.filter(r => newIdsYest.has(r['Account ID']));
     const t2New = t2.filter(r => newIdsMTD.has(r['Account ID']));
-
     const sum = (arr, col) => arr.reduce((s, r) => s + (Number(r[col]) || 0), 0);
-
     return {
       sport_payin_yesterday:      eur(sum(t1, 'Standard Payin Money')),
       sport_gross_yesterday:      eur(sum(t1, 'SportBetting Gross')),
@@ -57,11 +53,10 @@ export default function CMReportPage() {
     };
   };
 
-  // ── Top players ──────────────────────────────────
   const topPlayers = (t1, n = 5) => {
     const rows = t1.map(r => ({
       id:    r['Account ID'],
-      name:  `${r['First Name'] || ''} ${r['Last Name'] || ''}`.trim(),
+      name:  ((r['First Name'] || '') + ' ' + (r['Last Name'] || '')).trim(),
       gross: Number(r['SportBetting Gross EUR']) || 0,
       type:  r['Player Type Risk'] || '',
       bets:  Number(r['Standard Payin Tickets']) || 0,
@@ -71,285 +66,225 @@ export default function CMReportPage() {
     return { losses, wins };
   };
 
-  // ── Build XLSX from template structure ───────────
   const buildReport = (kpis, losses, wins) => {
     const wb = XLSX.utils.book_new();
-
-    // ── Sheet1: Report ──
     const ws = {};
-    const merges = [];
 
-    const hdr = { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1F3864' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true }, border: bdr() };
-    const lbl = { font: { bold: true, sz: 10 }, fill: { fgColor: { rgb: 'D9E1F2' } }, border: bdr() };
-    const val = { font: { sz: 10 }, fill: { fgColor: { rgb: 'FFFFFF' } }, border: bdr(), alignment: { horizontal: 'right' }, numFmt: '#,##0' };
-    const fml = { font: { sz: 10, color: { rgb: '155724' } }, fill: { fgColor: { rgb: 'D4EDDA' } }, border: bdr(), alignment: { horizontal: 'right' } };
-    const sec = { font: { bold: true, sz: 11, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '2E75B6' } }, border: bdr() };
-    const alt = { font: { sz: 10 }, fill: { fgColor: { rgb: 'EBF3FB' } }, border: bdr(), alignment: { horizontal: 'right' } };
+    const cv = (addr, v, style, fmt) => {
+      ws[addr] = { v: v === null || v === undefined ? '' : v, t: typeof v === 'number' ? 'n' : 's', s: style };
+      if (fmt) ws[addr].z = fmt;
+    };
+    const cf = (addr, formula, style, fmt) => {
+      ws[addr] = { f: formula, t: 'n', s: style };
+      if (fmt) ws[addr].z = fmt;
+    };
 
-    function sc(r, c, v, style, numFmt) {
-      const addr = XLSX.utils.encode_cell({ r: r - 1, c: c - 1 });
-      ws[addr] = { v, t: typeof v === 'number' ? 'n' : 's', s: style };
-      if (numFmt) ws[addr].z = numFmt;
+    const boldLg  = { font: { name: 'Calibri', bold: true,  sz: 15 }, alignment: { horizontal: 'center', vertical: 'center' } };
+    const boldMd  = { font: { name: 'Calibri', bold: true,  sz: 14 }, alignment: { horizontal: 'center', vertical: 'center' } };
+    const boldSm  = { font: { name: 'Calibri', bold: true,  sz: 12 }, alignment: { horizontal: 'center', vertical: 'center' } };
+    const plainLg = { font: { name: 'Calibri', bold: false, sz: 15 }, alignment: { horizontal: 'center', vertical: 'center' } };
+    const plainMd = { font: { name: 'Calibri', bold: false, sz: 12 }, alignment: { horizontal: 'center', vertical: 'center' } };
+    const numFmt  = '#,##0';
+    const pctFmt  = '0.00%';
+    const redNote = { font: { name: 'Calibri', bold: false, sz: 10, color: { rgb: 'FF0000' } }, alignment: { horizontal: 'left' } };
+    const redHdr  = { font: { name: 'Calibri', bold: true,  sz: 12, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'B50000' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+    const redCol  = { font: { name: 'Calibri', bold: true,  sz: 14, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: 'B50000' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+    const pinkSt  = { font: { name: 'Calibri', bold: true,  sz: 14 }, fill: { fgColor: { rgb: 'F8D3DB' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+
+    // Row 3
+    cv('B3','Period',boldLg); cv('C3','Sport Payin',boldLg); cv('D3','Sport Gross',boldLg); cv('E3','Deposit',boldLg); cv('F3','Margin',boldLg);
+    // Row 4
+    cv('B4','Yesterday',boldLg);
+    cv('C4',kpis.sport_payin_yesterday,boldLg,numFmt);
+    cv('D4',kpis.sport_gross_yesterday,boldLg,numFmt);
+    cv('E4',kpis.deposit_yesterday,boldLg,numFmt);
+    cf('F4','D4/C4',boldLg,pctFmt);
+    // Row 5
+    ['B5','C5','D5','E5','F5'].forEach(a=>cv(a,'',plainLg));
+    // Row 6
+    cv('B6','MTD',boldLg);
+    cv('C6',kpis.sport_payin_mtd,boldLg,numFmt);
+    cv('D6',kpis.sport_gross_mtd,boldLg,numFmt);
+    cv('E6',kpis.deposit_mtd,boldLg,numFmt);
+    cf('F6','D6/C6',boldLg,pctFmt);
+    // Row 7
+    ['C7','D7','E7','F7'].forEach(a=>cv(a,'',plainMd));
+    // Row 8
+    cv('B8','TARGET (149.044)',boldLg);
+    cf('C8','D6/149044',boldLg,pctFmt);
+    ['D8','E8','F8'].forEach(a=>cv(a,'',plainMd));
+    // Row 9
+    cv('E9','',plainMd);
+    // Row 10
+    cv('B10','Players',boldLg); cv('C10','Yesterday',boldLg); cv('D10','MTD',boldLg);
+    // Row 11
+    cv('B11','Registered players',boldLg);
+    cv('C11',kpis.registered_yesterday,boldLg,numFmt);
+    cv('D11',kpis.registered_mtd,boldLg,numFmt);
+    cv('E11','registered,actiity is not important',redNote);
+    // Row 12
+    cv('B12','Total active players SPORT',boldLg);
+    cv('C12',kpis.active_sport_yesterday,boldLg,numFmt);
+    cv('D12',kpis.active_sport_mtd,boldLg,numFmt);
+    // Row 13
+    ['C13','D13','E13','F13'].forEach(a=>cv(a,'',plainMd));
+    // Row 14
+    cv('B14','Bonus Conversion New Players',boldLg); cv('C14','Bonus Payin',boldLg); cv('D14','Bonus payout',boldLg); cv('E14','Conversion',boldLg); cv('F14','',plainMd);
+    // Row 15
+    cv('B15','Yesterday',boldLg);
+    cv('C15',kpis.bonus_new_payin_yesterday,boldLg,numFmt);
+    cv('D15',kpis.bonus_new_payout_yesterday,boldLg,numFmt);
+    cf('E15','D15/C15',boldLg,pctFmt); cv('F15','',plainMd);
+    // Row 16
+    cv('B16','MTD',boldLg);
+    cv('C16',kpis.bonus_new_payin_mtd,boldLg,numFmt);
+    cv('D16',kpis.bonus_new_payout_mtd,boldLg,numFmt);
+    cf('E16','D16/C16',boldLg,pctFmt); cv('F16','',plainMd);
+    // Row 17
+    ['B17','C17','D17','E17','F17'].forEach(a=>cv(a,'',plainLg));
+    // Row 18
+    cv('B18','Total Bonus',boldLg); cv('C18','Bonus Payin',boldLg); cv('D18','Bonus payout',boldLg); cv('E18','Conversion',boldLg); cv('F18','',plainMd);
+    // Row 19
+    cv('B19','MTD',boldLg);
+    cv('C19',kpis.bonus_total_payin_mtd,boldLg,numFmt);
+    cv('D19',kpis.bonus_total_payout_mtd,boldLg,numFmt);
+    cf('E19','D19/C19',boldLg,pctFmt); cv('F19','',plainMd);
+    // Row 21 — losses header (merged)
+    cv('B21','Players with the biggest losses for the previous day',boldSm);
+    ['C21','D21','E21','F21'].forEach(a=>cv(a,'',boldSm));
+    // Row 22
+    cv('B22','Account ID',boldMd); cv('C22','Name',boldMd); cv('D22','Gross',boldMd); cv('E22','Player type',boldMd); cv('F22','Bets:',boldMd);
+    // Rows 23–27
+    for (let i = 0; i < 5; i++) {
+      const r = 23+i, p = losses[i];
+      cv(`B${r}`, p ? p.id   : '', boldMd);
+      cv(`C${r}`, p ? p.name : '', boldMd);
+      cv(`D${r}`, p ? Math.round(p.gross*100)/100 : '', boldMd, '#,##0.00');
+      cv(`E${r}`, p ? p.type : '', boldMd);
+      cv(`F${r}`, p ? p.bets : '', boldMd, numFmt);
     }
-    function sf(r, c, formula, style) {
-      const addr = XLSX.utils.encode_cell({ r: r - 1, c: c - 1 });
-      ws[addr] = { f: formula.replace('=', ''), t: 'n', s: style };
+    // Row 28
+    ['B28','C28','D28','E28','F28'].forEach(a=>cv(a,'',{font:{name:'Calibri',bold:true,sz:13},alignment:{horizontal:'center'}}));
+    // Row 29 — wins header (red bg, merged)
+    cv('B29','Players with the biggest wins for the previous day',redHdr);
+    ['C29','D29','E29','F29'].forEach(a=>cv(a,'',redHdr));
+    // Row 30
+    cv('B30','Account ID',redCol); cv('C30','Name',redCol); cv('D30','Gross',redCol); cv('E30','Player type',redCol); cv('F30','Bets:',redCol);
+    // Rows 31–35
+    for (let i = 0; i < 5; i++) {
+      const r = 31+i, p = wins[i];
+      cv(`B${r}`, p ? p.id   : '', pinkSt);
+      cv(`C${r}`, p ? p.name : '', pinkSt);
+      cv(`D${r}`, p ? Math.round(p.gross*100)/100 : '', pinkSt, '#,##0.00');
+      cv(`E${r}`, p ? p.type : '', pinkSt);
+      cv(`F${r}`, p ? p.bets : '', pinkSt, numFmt);
     }
 
-    // Row 3 — Headers
-    ['', 'Period', 'Sport Payin (€)', 'Sport Gross (€)', 'Deposit (€)', 'Margin'].forEach((h, i) => {
-      if (h) sc(3, i + 1, h, hdr);
-    });
-    merges.push({ s: { r: 2, c: 0 }, e: { r: 2, c: 0 } });
-
-    // Row 4 — Yesterday
-    sc(4, 2, 'Yesterday', lbl);
-    sc(4, 3, kpis.sport_payin_yesterday, val, '#,##0');
-    sc(4, 4, kpis.sport_gross_yesterday, val, '#,##0');
-    sc(4, 5, kpis.deposit_yesterday,     val, '#,##0');
-    sf(4, 6, '=D4/C4', { ...fml, z: '0.00%' });
-
-    // Row 6 — MTD
-    sc(6, 2, 'MTD', lbl);
-    sc(6, 3, kpis.sport_payin_mtd,   val, '#,##0');
-    sc(6, 4, kpis.sport_gross_mtd,   val, '#,##0');
-    sc(6, 5, kpis.deposit_mtd,       val, '#,##0');
-    sf(6, 6, '=D6/C6', { ...fml, z: '0.00%' });
-
-    // Row 8 — Target
-    sc(8, 2, 'TARGET (149.044)', lbl);
-    sf(8, 3, '=D6/149044', { ...fml, z: '0.00%' });
-
-    // Row 10 — Players header
-    sc(10, 2, 'Players',    hdr); sc(10, 3, 'Yesterday', hdr); sc(10, 4, 'MTD', hdr);
-    merges.push({ s:{r:9,c:1}, e:{r:9,c:1} });
-
-    sc(11, 2, 'Registered players',       lbl);
-    sc(11, 3, kpis.registered_yesterday,  val, '#,##0');
-    sc(11, 4, kpis.registered_mtd,        val, '#,##0');
-
-    sc(12, 2, 'Total active players SPORT', lbl);
-    sc(12, 3, kpis.active_sport_yesterday,  val, '#,##0');
-    sc(12, 4, kpis.active_sport_mtd,        val, '#,##0');
-
-    // Row 14 — Bonus Conversion header
-    sc(14, 2, 'Bonus Conversion New Players', hdr); sc(14, 3, 'Bonus Payin', hdr); sc(14, 4, 'Bonus Payout', hdr); sc(14, 5, 'Conversion', hdr);
-    merges.push({ s:{r:13,c:1}, e:{r:13,c:1} });
-
-    sc(15, 2, 'Yesterday',                      lbl);
-    sc(15, 3, kpis.bonus_new_payin_yesterday,   val, '#,##0');
-    sc(15, 4, kpis.bonus_new_payout_yesterday,  val, '#,##0');
-    sf(15, 5, '=IFERROR(D15/C15,0)', { ...fml, z: '0.00%' });
-
-    sc(16, 2, 'MTD',                    lbl);
-    sc(16, 3, kpis.bonus_new_payin_mtd, val, '#,##0');
-    sc(16, 4, kpis.bonus_new_payout_mtd,val, '#,##0');
-    sf(16, 5, '=IFERROR(D16/C16,0)', { ...fml, z: '0.00%' });
-
-    // Row 18 — Total Bonus
-    sc(18, 2, 'Total Bonus', hdr); sc(18, 3, 'Bonus Payin', hdr); sc(18, 4, 'Bonus Payout', hdr); sc(18, 5, 'Conversion', hdr);
-    merges.push({ s:{r:17,c:1}, e:{r:17,c:1} });
-
-    sc(19, 2, 'MTD',                      lbl);
-    sc(19, 3, kpis.bonus_total_payin_mtd, val, '#,##0');
-    sc(19, 4, kpis.bonus_total_payout_mtd,val, '#,##0');
-    sf(19, 5, '=IFERROR(D19/C19,0)', { ...fml, z: '0.00%' });
-
-    // Row 21 — Top Losses header
-    sc(21, 2, 'Players with the biggest losses for the previous day', sec);
-    merges.push({ s:{r:20,c:1}, e:{r:20,c:5} });
-    sc(22, 2, 'Account ID', hdr); sc(22, 3, 'Name', hdr); sc(22, 4, 'Gross (€)', hdr); sc(22, 5, 'Player Type', hdr); sc(22, 6, 'Bets', hdr);
-
-    losses.forEach((p, i) => {
-      const r = 23 + i;
-      const s = i % 2 === 0 ? alt : val;
-      sc(r, 2, p.id,                    s);
-      sc(r, 3, p.name,                  { ...s, alignment: { horizontal: 'left' } });
-      sc(r, 4, Math.round(p.gross * 100) / 100, s, '#,##0.00');
-      sc(r, 5, p.type,                  s);
-      sc(r, 6, p.bets,                  s, '#,##0');
-    });
-
-    // Row 29 — Top Wins header
-    sc(29, 2, 'Players with the biggest wins for the previous day', sec);
-    merges.push({ s:{r:28,c:1}, e:{r:28,c:5} });
-    sc(30, 2, 'Account ID', hdr); sc(30, 3, 'Name', hdr); sc(30, 4, 'Gross (€)', hdr); sc(30, 5, 'Player Type', hdr); sc(30, 6, 'Bets', hdr);
-
-    wins.forEach((p, i) => {
-      const r = 31 + i;
-      const s = i % 2 === 0 ? alt : val;
-      sc(r, 2, p.id,                    s);
-      sc(r, 3, p.name,                  { ...s, alignment: { horizontal: 'left' } });
-      sc(r, 4, Math.round(p.gross * 100) / 100, s, '#,##0.00');
-      sc(r, 5, p.type,                  s);
-      sc(r, 6, p.bets,                  s, '#,##0');
-    });
-
-    ws['!cols'] = [{ wch: 3 }, { wch: 32 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 10 }];
-    ws['!merges'] = merges;
-    ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 36, c: 6 } });
-    XLSX.utils.book_append_sheet(wb, ws, 'CM Daily Report');
-
+    ws['!merges'] = [
+      { s:{r:20,c:1}, e:{r:20,c:5} },
+      { s:{r:28,c:1}, e:{r:28,c:5} },
+    ];
+    ws['!cols'] = [{wch:5.33},{wch:33.5},{wch:21.5},{wch:15.66},{wch:17.5},{wch:76.33},{wch:10.83}];
+    const hts = {3:20,4:20,5:8,6:17,8:21,10:20,11:20,12:20,14:20,15:20,16:20,17:20,18:20,19:21,21:20,22:19,23:19,24:19,25:19,26:19,27:19,28:17,30:19,31:19,32:19,33:19,34:19,35:19};
+    ws['!rows'] = [];
+    for (let i=0;i<=35;i++) ws['!rows'].push(hts[i+1]?{hpt:hts[i+1]}:{});
+    ws['!ref'] = 'A1:G36';
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
     return wb;
   };
 
-  function bdr() {
-    const t = { style: 'thin', color: { rgb: 'BFBFBF' } };
-    return { top: t, bottom: t, left: t, right: t };
-  }
-
-  // ── Pipeline ─────────────────────────────────────
   const runPipeline = async () => {
     setRunning(true); setLogs([]); setResult(null);
     try {
       log('📂 Chargement des fichiers CSV...');
-      const [t1, t2, a1, a2] = await Promise.all([
-        loadCSV(files.t1), loadCSV(files.t2),
-        loadCSV(files.a1), loadCSV(files.a2),
-      ]);
+      const [t1, t2, a1, a2] = await Promise.all([loadCSV(files.t1), loadCSV(files.t2), loadCSV(files.a1), loadCSV(files.a2)]);
       log(`  ✓ Transactions yesterday : ${t1.length} lignes`, 'info');
       log(`  ✓ Transactions MTD       : ${t2.length} lignes`, 'info');
       log(`  ✓ Accounts yesterday     : ${a1.length} joueurs`, 'info');
       log(`  ✓ Accounts MTD           : ${a2.length} joueurs`, 'info');
-
       log('🔢 Calcul des KPIs...');
       const kpis = computeKPIs(t1, t2, a1, a2);
       log(`  Sport Payin Yesterday : ${kpis.sport_payin_yesterday.toLocaleString()} €`, 'info');
-      log(`  Sport Gross Yesterday : ${kpis.sport_gross_yesterday.toLocaleString()} €`, 'info');
-      log(`  Registered Yesterday  : ${kpis.registered_yesterday}`, 'info');
-
       log('🏆 Calcul top joueurs...');
       const { losses, wins } = topPlayers(t1);
-      log(`  ${losses.length} top pertes · ${wins.length} top gains`, 'info');
-
       log('📊 Génération du rapport Excel...');
       const wb = buildReport(kpis, losses, wins);
-      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+      const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
       const dd = String(yesterday.getDate()).padStart(2,'0');
       const mm = String(yesterday.getMonth()+1).padStart(2,'0');
       const yy = String(yesterday.getFullYear()).slice(-2);
       const filename = `CM_DAILY_REPORT_${dd}${mm}${yy}.xlsx`;
-      const blob = new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
+      const blob = new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
       setResult({ blob, filename, kpis, losses, wins });
       log(`✅ Rapport généré : ${filename}`, 'info');
-    } catch (err) {
-      log(`❌ Erreur : ${err.message}`, 'error');
-    }
+    } catch(err) { log(`❌ Erreur : ${err.message}`, 'error'); }
     setRunning(false);
   };
 
-  const allFilesReady = files.t1 && files.t2 && files.a1 && files.a2;
-
   const FILE_DEFS = [
-    { key: 't1', label: 'PLAYER_TRANSACTION_REPORT_1.csv', sub: 'Transactions J-1', icon: '📋', color: 'var(--sport)' },
-    { key: 't2', label: 'PLAYER_TRANSACTION_REPORT_2.csv', sub: 'Transactions MTD',  icon: '📋', color: 'var(--deposit)' },
-    { key: 'a1', label: 'player_account_report_1.csv',     sub: 'Comptes J-1',       icon: '👤', color: 'var(--sport)' },
-    { key: 'a2', label: 'player_account_report_2.csv',     sub: 'Comptes MTD',        icon: '👤', color: 'var(--deposit)' },
+    { key:'t1', label:'PLAYER_TRANSACTION_REPORT_1.csv', sub:'Transactions J-1', icon:'📋' },
+    { key:'t2', label:'PLAYER_TRANSACTION_REPORT_2.csv', sub:'Transactions MTD',  icon:'📋' },
+    { key:'a1', label:'player_account_report_1.csv',     sub:'Comptes J-1',       icon:'👤' },
+    { key:'a2', label:'player_account_report_2.csv',     sub:'Comptes MTD',        icon:'👤' },
   ];
 
   return (
     <div>
-      {/* Upload grid */}
       <p className="section-label">Upload des 4 fichiers CSV</p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        {FILE_DEFS.map(({ key, label, sub, icon, color }) => (
-          <div key={key}
-            onClick={() => refs[key].current.click()}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem', marginBottom:'1.5rem' }}>
+        {FILE_DEFS.map(({ key, label, sub, icon }) => (
+          <div key={key} onClick={() => refs[key].current.click()}
             onDragOver={e => e.preventDefault()}
             onDrop={e => { e.preventDefault(); setFile(key, e.dataTransfer.files[0]); }}
-            style={{
-              border: `2px dashed ${files[key] ? color : 'var(--border2)'}`,
-              borderRadius: 'var(--radius-lg)', padding: '1.5rem', textAlign: 'center',
-              cursor: 'pointer', background: files[key] ? `rgba(14,165,233,0.05)` : 'var(--bg3)',
-              transition: 'all 0.2s',
-            }}>
+            className={`drop-zone ${files[key] ? 'has-file' : ''}`}>
             <input ref={refs[key]} type="file" accept=".csv" hidden onChange={e => setFile(key, e.target.files[0])} />
-            <div style={{ fontSize: 24, marginBottom: 8 }}>{icon}</div>
-            <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--text)', fontWeight: 600, marginBottom: 4 }}>{label}</div>
-            <div style={{ fontSize: 11, color: 'var(--muted)' }}>{sub}</div>
-            {files[key] && (
-              <div style={{ marginTop: 8, fontSize: 11, color: color, fontWeight: 600 }}>✓ {files[key].name}</div>
-            )}
+            <div className="drop-icon">{icon}</div>
+            <div className="drop-label">{label}</div>
+            <div className="drop-sub">{sub}</div>
+            {files[key] && <div className="file-chip">✓ {files[key].name}</div>}
           </div>
         ))}
       </div>
 
-      <button onClick={runPipeline} disabled={!allFilesReady || running}
-        className="btn primary" style={{ fontSize: 14, padding: '11px 28px', marginBottom: '1.5rem' }}>
-        {running ? '⟳ Génération…' : '▶  Générer CM Daily Report'}
+      <button onClick={runPipeline} disabled={!files.t1||!files.t2||!files.a1||!files.a2||running}
+        className="btn primary" style={{ fontSize:14, padding:'11px 28px', marginBottom:'1.5rem' }}>
+        {running ? '⟳ Génération…' : '▶  Générer Daily Sport Report'}
       </button>
 
-      {/* Logs */}
       {logs.length > 0 && (
         <>
-          <p className="section-label" style={{ marginTop: '1rem' }}>Console</p>
-          <div className="log-console" style={{ marginBottom: '1.5rem' }}>
-            {logs.map((l, i) => (
-              <span key={i} className={`log-line ${l.type}`}>
-                <span style={{ color: '#475569', marginRight: 8 }}>[{l.t}]</span>{l.msg}{'\n'}
+          <p className="section-label" style={{ marginTop:'1rem' }}>Console</p>
+          <div className="log-console" style={{ marginBottom:'1.5rem' }}>
+            {logs.map((l,i) => (
+              <span key={i} className={`log-line ${l.type}`} style={{ display:'block' }}>
+                <span style={{ color:'#475569', marginRight:8 }}>[{l.t}]</span>{l.msg}
               </span>
             ))}
           </div>
         </>
       )}
 
-      {/* Results */}
       {result && (
         <div>
-          {/* KPI Preview */}
-          <p className="section-label">Aperçu des KPIs</p>
-          <div className="kpi-banner" style={{ marginBottom: '1.5rem' }}>
+          <div className="kpi-banner" style={{ marginBottom:'1.5rem' }}>
             {[
-              { label: 'Sport Payin Yesterday', value: `${result.kpis.sport_payin_yesterday.toLocaleString()} €`, color: 'var(--sport)' },
-              { label: 'Sport Gross Yesterday', value: `${result.kpis.sport_gross_yesterday.toLocaleString()} €`, color: 'var(--accent)' },
-              { label: 'Deposit Yesterday',     value: `${result.kpis.deposit_yesterday.toLocaleString()} €`,     color: 'var(--deposit)' },
-              { label: 'Registered Yesterday',  value: result.kpis.registered_yesterday,  color: 'var(--text)' },
-              { label: 'Active Sport Yest.',    value: result.kpis.active_sport_yesterday, color: 'var(--text)' },
-              { label: 'Sport Payin MTD',       value: `${result.kpis.sport_payin_mtd.toLocaleString()} €`,      color: 'var(--sport)' },
-              { label: 'Sport Gross MTD',       value: `${result.kpis.sport_gross_mtd.toLocaleString()} €`,      color: 'var(--accent)' },
-              { label: 'Deposit MTD',           value: `${result.kpis.deposit_mtd.toLocaleString()} €`,          color: 'var(--deposit)' },
+              {label:'Sport Payin Yesterday', value:`${result.kpis.sport_payin_yesterday.toLocaleString()} €`, color:'var(--sport)'},
+              {label:'Sport Gross Yesterday', value:`${result.kpis.sport_gross_yesterday.toLocaleString()} €`, color:'var(--accent)'},
+              {label:'Deposit Yesterday',     value:`${result.kpis.deposit_yesterday.toLocaleString()} €`,     color:'var(--deposit)'},
+              {label:'Registered Yesterday',  value:result.kpis.registered_yesterday,  color:'var(--text)'},
+              {label:'Active Sport Yest.',    value:result.kpis.active_sport_yesterday, color:'var(--text)'},
+              {label:'Sport Payin MTD',       value:`${result.kpis.sport_payin_mtd.toLocaleString()} €`, color:'var(--sport)'},
+              {label:'Sport Gross MTD',       value:`${result.kpis.sport_gross_mtd.toLocaleString()} €`, color:'var(--accent)'},
+              {label:'Deposit MTD',           value:`${result.kpis.deposit_mtd.toLocaleString()} €`,     color:'var(--deposit)'},
             ].map(k => (
               <div key={k.label} className="kpi-item">
                 <div className="kpi-label">{k.label}</div>
-                <div className="kpi-value" style={{ color: k.color, fontSize: 18 }}>{k.value}</div>
+                <div className="kpi-value" style={{ color:k.color, fontSize:18 }}>{k.value}</div>
               </div>
             ))}
           </div>
-
-          {/* Top 5 players */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-            {[
-              { title: '🔴 Top 5 Pertes', players: result.losses, color: 'var(--danger)' },
-              { title: '🟢 Top 5 Gains',  players: result.wins,   color: 'var(--deposit)' },
-            ].map(({ title, players, color }) => (
-              <div key={title} className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '10px 14px', background: 'var(--bg3)', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13 }}>{title}</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                  <thead>
-                    <tr>
-                      {['ID', 'Nom', 'Gross (€)'].map(h => (
-                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, fontSize: 10, textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {players.map((p, i) => (
-                      <tr key={i} style={{ background: i % 2 === 0 ? 'var(--bg2)' : 'var(--bg3)' }}>
-                        <td style={{ padding: '8px 12px', fontFamily: 'JetBrains Mono, monospace' }}>{p.id}</td>
-                        <td style={{ padding: '8px 12px' }}>{p.name || '—'}</td>
-                        <td style={{ padding: '8px 12px', color, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{Math.round(p.gross).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
-
-          {/* Download */}
           <button onClick={() => saveAs(result.blob, result.filename)}
-            className="btn success" style={{ fontSize: 14, padding: '11px 28px' }}>
+            className="btn success" style={{ fontSize:14, padding:'11px 28px' }}>
             ⬇  Télécharger {result.filename}
           </button>
         </div>
