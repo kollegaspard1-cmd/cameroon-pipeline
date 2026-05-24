@@ -9,7 +9,7 @@ const C = {
   gold_bg:'FFF2CC', gold_fg:'7F6000', gold_dark:'BF8F00',
   grey:'F2F2F2', white:'FFFFFF', light_blue:'DEEAF1',
 };
-const FMT_NB='#,##0', FMT_DIF='#,##0;[Red]-#,##0', FMT_PCT='0.0"%"';
+const FMT_NB='#,##0', FMT_DIF='#,##0;[Red]-#,##0';
 
 function bdr() { const t={style:'thin',color:{rgb:'BFBFBF'}}; return {top:t,bottom:t,left:t,right:t}; }
 function fill(rgb) { return {patternType:'solid',fgColor:{rgb}}; }
