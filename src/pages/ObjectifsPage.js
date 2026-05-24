@@ -253,7 +253,6 @@ export default function ObjectifsPage() {
     try {
       const moisUp   = mois.toUpperCase().trim();
       const anneeN   = parseInt(annee);
-      const moisSafe = moisUp.replace(/ /g,'_');
       const prefix   = `${moisUp}${anneeN}`;
       const zonesSup = supers.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
 
