@@ -276,7 +276,7 @@ function buildTaperPlus(wb, sheetName, df, seuilPlus, titre, mois) {
     row++;
     bloc.rows.forEach((r, i) => {
       const bg = i%2===0 ? bloc.bge : C.white;
-      const isGood = true;
+      
       sc(ws, row, 2, i+1, { font:fnt(true,10,'FFFFFF'), fill:fill(bloc.bg), border:bdr(), alignment:aln('center','center') });
       sc(ws, row, 3, r.Shop, dStyle(bg,false,'000000','left'));
       scn(ws, row, 4, r['Bet tickets MTD'], dStyle(bg), FMT_NB);
