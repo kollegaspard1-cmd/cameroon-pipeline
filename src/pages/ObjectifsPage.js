@@ -12,6 +12,9 @@ export default function ObjectifsPage() {
   const [listData,    setListData]    = useState(null);
   const [selectedProp,setSelectedProp]= useState('');
   const [propResult,  setPropResult]  = useState(null);
+  const [superList,   setSuperList]   = useState(null); // {super: [[z,sup,sd,st],...]}
+  const [selectedSup, setSelectedSup] = useState('');
+  const [supResult,   setSupResult]   = useState(null);
   const [mois,        setMois]        = useState('MAI');
   const [annee,       setAnnee]       = useState(2026);
   const [taux,        setTaux]        = useState(15);
@@ -243,6 +246,7 @@ export default function ObjectifsPage() {
       const allZones = Object.keys(zoneData);
       const allRows  = allZones.flatMap(z => zoneData[z]);
       log(`\n📋 ${allZones.length} zones · ${allRows.length} salles`);
+      buildSuperList(zoneData);
 
       const zip = new JSZip();
       const allMissing = [];
@@ -354,6 +358,41 @@ export default function ObjectifsPage() {
     } catch(err) { log(`❌ Erreur : ${err.message}`); }
   };
 
+  // ── Build super list ────────────────────────────
+  const buildSuperList = (zoneData) => {
+    const superMap = {};
+    Object.values(zoneData).flat().forEach(([z,sup,sd,st]) => {
+      if (!superMap[sup]) superMap[sup] = [];
+      superMap[sup].push([z,sup,sd,st]);
+    });
+    setSuperList(superMap);
+    return superMap;
+  };
+
+  // ── Pipeline par super ──────────────────────────
+  const runSuperPipeline = async () => {
+    if (!selectedSup || !superList || !csvFile) return;
+    setSupResult(null);
+    try {
+      const moisUp  = mois.toUpperCase().trim();
+      const anneeN  = parseInt(annee);
+      const tauxVal = parseInt(taux);
+      const rows    = superList[selectedSup];
+      log(`\n👤 Génération objectifs Super : ${selectedSup}...`);
+      const csvLookup = await loadCSV(csvFile);
+      const { ws, missing } = buildSheet(rows, csvLookup,
+        `OBJECTIFS ${moisUp} ${anneeN}  ·  ${selectedSup}  ·  ${rows.length} salles`,
+        moisUp, anneeN, true, false, tauxVal);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, selectedSup.slice(0,31));
+      const filename = `${moisUp}${anneeN}_SUPER_${selectedSup.replace(/ /g,'_').replace(/[/]/g,'-')}.xlsx`;
+      const blob = new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],
+        {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      setSupResult({ blob, filename, count:rows.length, missing });
+      log(`  ✅ ${filename} (${rows.length} salles)`);
+    } catch(err) { log(`❌ Erreur : ${err.message}`); }
+  };
+
   // ── UI ───────────────────────────────────────────
   return (
     <div>
@@ -366,9 +405,9 @@ export default function ObjectifsPage() {
         ].map(({ label, sub, ref, setter, file, accept, icon }) => (
           <div key={label} onClick={() => ref.current.click()}
             onDragOver={e => e.preventDefault()}
-            onDrop={e => { e.preventDefault(); setter(e.dataTransfer.files[0]); }}
+            onDrop={e => { e.preventDefault(); const f=e.dataTransfer.files[0]; setter(f); if(accept==='.xlsx'&&f){loadRecap(f).then(zd=>buildSuperList(zd));} }}
             className={`drop-zone ${file ? 'has-file' : ''}`}>
-            <input ref={ref} type="file" accept={accept} hidden onChange={e => setter(e.target.files[0])} />
+            <input ref={ref} type="file" accept={accept} hidden onChange={e => { const f=e.target.files[0]; setter(f); if(accept==='.xlsx'&&f){loadRecap(f).then(zd=>buildSuperList(zd));} }} />
             <div className="drop-icon">{icon}</div>
             <div className="drop-label">{label}</div>
             <div className="drop-sub">{sub}</div>
@@ -444,6 +483,42 @@ export default function ObjectifsPage() {
               <span style={{ fontSize:12, color:'var(--muted)' }}>
                 {propResult.count} salles
                 {propResult.missing.length > 0 && ` · ⚠️ ${propResult.missing.length} sans données CSV`}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sélecteur Super en charge */}
+      {superList && (
+        <div className="card" style={{ marginBottom:'1.25rem' }}>
+          <p className="section-label">Objectifs par Super en charge</p>
+          <div style={{ display:'flex', gap:'1rem', alignItems:'flex-end', flexWrap:'wrap' }}>
+            <label style={{ display:'flex', flexDirection:'column', gap:5, flex:1 }}>
+              <span style={{ fontSize:12, color:'var(--muted)', fontWeight:600 }}>Super en charge</span>
+              <select value={selectedSup} onChange={e => setSelectedSup(e.target.value)}
+                className="field-input" style={{ cursor:'pointer' }}>
+                <option value="">-- Choisir un super --</option>
+                {Object.entries(superList).sort(([a],[b])=>a.localeCompare(b)).map(([sup, rows]) => (
+                  <option key={sup} value={sup}>{sup} ({rows.length} salles)</option>
+                ))}
+              </select>
+            </label>
+            <button onClick={runSuperPipeline}
+              disabled={!selectedSup || !csvFile}
+              className="btn primary" style={{ padding:'9px 20px', whiteSpace:'nowrap' }}>
+              ▶  Objectifs {selectedSup || 'super'}
+            </button>
+          </div>
+          {supResult && (
+            <div style={{ marginTop:'1rem', display:'flex', alignItems:'center', gap:'1rem', flexWrap:'wrap' }}>
+              <button onClick={() => saveAs(supResult.blob, supResult.filename)}
+                className="btn success" style={{ fontSize:13 }}>
+                ⬇  Télécharger {supResult.filename}
+              </button>
+              <span style={{ fontSize:12, color:'var(--muted)' }}>
+                {supResult.count} salles
+                {supResult.missing.length > 0 && ` · ⚠️ ${supResult.missing.length} sans données CSV`}
               </span>
             </div>
           )}
