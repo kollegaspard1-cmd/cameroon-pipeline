@@ -90,7 +90,7 @@ function prepDf(rows) {
 // ── Sheet: Données ────────────────────────────────
 function buildOngData(wb, sheetName, df, titre, mois) {
   const ws={};
-  const nr=df.length, totalR=5+nr+1;
+  const nr=df.length;
   sc(ws,2,1,`${titre} | ${mois}  ·  ${df.length} salles`,tS(C.dark_blue,13));
   mg(ws,2,1,2,21);
 
@@ -583,7 +583,7 @@ export default function BetshopMarchesPage() {
         readXlsx(evalFile,'CAMPRESJ'),
         readXlsx(reportFile,'Sheet1'),
       ]);
-      const {list, campSet}=buildMarketList(evalRows,reportRows);
+      buildMarketList(evalRows,reportRows);
       const campSet2=new Set(evalRows.map(r=>r['Shop']||r['Betshop name']||''));
       log(`  ✓ Eval CAMPRESJ : ${campSet2.size} salles`);
       log(`  ✓ Report : ${reportRows.length} salles`);
