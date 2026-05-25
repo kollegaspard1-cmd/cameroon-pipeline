@@ -12,6 +12,9 @@ export default function RapportsPage() {
   const [running, setRunning]         = useState(false);
   const [logs, setLogs]               = useState([]);
   const [results, setResults]         = useState(null);
+  const [superList,   setSuperList]   = useState(null);
+  const [selectedSup, setSelectedSup] = useState('');
+  const [supResult,   setSupResult]   = useState(null);
   const betRef  = useRef();
   const objRef  = useRef();
   const recRef  = useRef();
@@ -27,7 +30,7 @@ export default function RapportsPage() {
   };
 
   function fill(rgb)   { return { patternType: 'solid', fgColor: { rgb } }; }
-  function bdr()       { const t = { style: 'thin', color: { argb: 'FFBFBFBF' } }; return { top: t, bottom: t, left: t, right: t }; }
+  function bdr()       { const t = { style: 'thin', color: { rgb: 'BFBFBF' } }; return { top: t, bottom: t, left: t, right: t }; }
   function fnt(bold=false, sz=10, rgb='000000') { return { name: 'Arial', bold, sz, color: { rgb } }; }
   function aln(h='center', v='center', wrap=false) { return { horizontal: h, vertical: v, wrapText: wrap }; }
 
@@ -139,7 +142,7 @@ export default function RapportsPage() {
           for (let i = hr + 1; i < raw.length; i++) {
             const row = raw[i];
             const zone  = String(row[ci.ZONES] || '').trim() || lastZone;
-            const sup   = String(row[ci.SUPER] || '').trim() || lastSuper;
+            const sup   = String(row[ci.SUPER] || '').trim().replace(/\s+/g,' ') || lastSuper;
             const salle = String(row[ci.SALLES] || '').trim();
             const tech  = String(row[ci.TECH]   || '').trim();
             if (!salle && !tech) continue;
@@ -188,8 +191,9 @@ export default function RapportsPage() {
   const makeSupers = (dfV) => {
     const supMap = {};
     dfV.forEach(r => {
-      if (!supMap[r.SUPER]) supMap[r.SUPER] = [];
-      supMap[r.SUPER].push(r);
+      const supKey = (r.SUPER||'').trim().replace(/\s+/g,' ');
+      if (!supMap[supKey]) supMap[supKey] = [];
+      supMap[supKey].push({...r, SUPER: supKey});
     });
     const supers = Object.entries(supMap).map(([sup, rows]) => {
       const zones = [...new Set(rows.map(r => r.ZONES))];
@@ -361,12 +365,76 @@ export default function RapportsPage() {
     XLSX.utils.book_append_sheet(wb, writeClassement(supers, moisLabel), '① Classement Supers');
     XLSX.utils.book_append_sheet(wb, writeDetail(masterSub, moisLabel), '② Détail par Zone & Super');
     const medals = {1:'🥇',2:'🥈',3:'🥉'};
+    const usedNames = new Set(['① Classement Supers', '② Détail par Zone & Super']);
     supers.forEach((sd, i) => {
       const em = medals[i+1] || '  ';
-      const name = `${em} ${sd.super}`.slice(0,31);
-      XLSX.utils.book_append_sheet(wb, writeSuperSheet(sd, moisLabel, i+1, supers.length), name);
+      let name = `${em} ${sd.super.trim()}`.slice(0,31);
+      // Deduplicate sheet names
+      let finalName = name;
+      let counter = 2;
+      while (usedNames.has(finalName)) {
+        finalName = `${name.slice(0,28)} ${counter}`.slice(0,31);
+        counter++;
+      }
+      usedNames.add(finalName);
+      XLSX.utils.book_append_sheet(wb, writeSuperSheet(sd, moisLabel, i+1, supers.length), finalName);
     });
     return wb;
+  };
+
+  // ── Build super list ─────────────────────────────
+  const buildSuperList = (recapData) => {
+    const superMap = {};
+    Object.entries(recapData).forEach(([ville, rows]) => {
+      rows.forEach(r => {
+        const key = (r.SUPER||'').trim().replace(/\s+/g,' ');
+        if (!key) return;
+        if (!superMap[key]) superMap[key] = { ville, rows: [] };
+        superMap[key].rows.push(r);
+      });
+    });
+    setSuperList(superMap);
+    return superMap;
+  };
+
+  // ── Pipeline par super ────────────────────────────
+  const runSuperPipeline = async () => {
+    if (!selectedSup || !superList || !betshopFile || !objectifsFile || !recapFile) return;
+    setSupResult(null);
+    try {
+      const moisUp = mois.toUpperCase();
+      log(`\n👤 Génération réalisation Super : ${selectedSup}...`);
+      const [betRows, objRows, recap] = await Promise.all([
+        loadBetshop(betshopFile),
+        loadObjectifs(objectifsFile),
+        loadRecap(recapFile),
+      ]);
+
+      const supData = superList[selectedSup];
+      const ville   = supData.ville;
+
+      const master = buildMaster(recap, betRows, objRows);
+      const vRows  = master[ville] || [];
+      const supRows = vRows.filter(r => (r.SUPER||'').trim().replace(/\s+/g,' ') === selectedSup);
+
+      if (supRows.length === 0) {
+        log(`  ⚠️ Aucune salle trouvée pour ${selectedSup}`);
+        return;
+      }
+
+      log(`  ${supRows.length} salles pour ${selectedSup}`);
+
+      const supers = makeSupers(supRows);
+      const wb     = buildWb(supers, { [ville]: supRows }, moisUp);
+      const safe   = selectedSup.replace(/ /g,'_').replace(/[/]/g,'-');
+      const filename = `ANALYSE_SUPER_${safe}_${moisUp.replace(/ /g,'_')}.xlsx`;
+      const blob = new Blob(
+        [XLSX.write(wb, { bookType:'xlsx', type:'array' })],
+        { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+      );
+      setSupResult({ blob, filename });
+      log(`  ✅ ${filename}`);
+    } catch(err) { log(`❌ Erreur : ${err.message}`); }
   };
 
   // ── Pipeline principal ───────────────────────────
@@ -380,6 +448,7 @@ export default function RapportsPage() {
         loadObjectifs(objectifsFile),
         loadRecap(recapFile),
       ]);
+      buildSuperList(recap);
       const villes = Object.keys(recap);
       log(`  Villes détectées : ${villes.join(', ')}`);
       const master = buildMaster(recap, betRows, objRows);
@@ -441,6 +510,38 @@ export default function RapportsPage() {
           </div>
         ))}
       </div>
+
+      {/* Sélecteur Super en charge */}
+      {superList && (
+        <div className="card" style={{ marginBottom:'1.25rem' }}>
+          <p className="section-label">Réalisation individuelle — Super en charge</p>
+          <div style={{ display:'flex', gap:'1rem', alignItems:'flex-end', flexWrap:'wrap' }}>
+            <label style={{ display:'flex', flexDirection:'column', gap:5, flex:1 }}>
+              <span style={{ fontSize:12, color:'var(--muted)', fontWeight:600 }}>Super en charge</span>
+              <select value={selectedSup} onChange={e => setSelectedSup(e.target.value)}
+                className="field-input" style={{ cursor:'pointer' }}>
+                <option value="">-- Choisir un super --</option>
+                {Object.entries(superList).sort(([a],[b])=>a.localeCompare(b)).map(([sup, data]) => (
+                  <option key={sup} value={sup}>{sup} ({data.rows.length} salles — {data.ville})</option>
+                ))}
+              </select>
+            </label>
+            <button onClick={runSuperPipeline}
+              disabled={!selectedSup || !betshopFile || !objectifsFile || !recapFile}
+              className="btn primary" style={{ padding:'9px 20px', whiteSpace:'nowrap' }}>
+              ▶  Réalisation {selectedSup || 'super'}
+            </button>
+          </div>
+          {supResult && (
+            <div style={{ marginTop:'1rem' }}>
+              <button onClick={() => saveAs(supResult.blob, supResult.filename)}
+                className="btn success" style={{ fontSize:13 }}>
+                ⬇  Télécharger {supResult.filename}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Mois */}
       <div style={{ marginBottom: '1.5rem' }}>
