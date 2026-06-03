@@ -3,6 +3,14 @@ import React, { useState, useCallback, useRef } from 'react';
 import { runPipeline, readExcelSheets, readCSV, buildAllExports } from '../lib/pipeline';
 import { saveRun } from '../lib/runHistory';
 
+const CURRENCIES = [
+  'XAF','XOF','EUR','USD','GBP','CHF','JPY','CAD','AUD','CNY',
+  'BRL','INR','MXN','ZAR','NGN','GHS','KES','TZS','UGX','RWF',
+  'ETB','MAD','DZD','TND','EGP','XCD','HTG','MRU','GMD','SLL',
+  'LRD','GNF','BIF','CDF','AOA','MZN','BWP','NAD','ZMW','MWK',
+  'SZL','LSL','SCR','MUR','KMF','STN','CVE',
+];
+
 export default function UploadPage({ onResult }) {
   const [excelFile, setExcelFile] = useState(null);
   const [csvFile,   setCsvFile]   = useState(null);
@@ -13,6 +21,12 @@ export default function UploadPage({ onResult }) {
   const [saveToFb,  setSaveToFb]  = useState(true);
   const [threshold, setThreshold] = useState(2000);
   const [maxSport,  setMaxSport]  = useState(30000);
+
+  // Balise de fin (sentinel)
+  const [sentinelActive,   setSentinelActive]   = useState(true);
+  const [sentinelAccount,  setSentinelAccount]  = useState(1326274);
+  const [sentinelAmount,   setSentinelAmount]   = useState(1);
+  const [sentinelCurrency, setSentinelCurrency] = useState('XAF');
 
   const excelRef = useRef();
   const csvRef   = useRef();
@@ -43,13 +57,27 @@ export default function UploadPage({ onResult }) {
       const csvText = await csvFile.text();
       const csvRows = readCSV(csvText);
       log(`CSV rows: ${csvRows.length}`, 'info');
-      const result = runPipeline(sheets, csvRows, (msg, pct) => { log(msg); setProgress(pct); }, threshold, maxSport);
+
+      const sentinelConfig = sentinelActive ? {
+        account:  sentinelAccount,
+        amount:   sentinelAmount,
+        currency: sentinelCurrency,
+      } : null;
+
+      if (sentinelActive) {
+        log(`Balise de fin active — Compte: ${sentinelAccount}, Montant: ${sentinelAmount} ${sentinelCurrency}`, 'info');
+      } else {
+        log('Balise de fin désactivée', 'warn');
+      }
+
+      const result = runPipeline(sheets, csvRows, (msg, pct) => { log(msg); setProgress(pct); }, threshold, maxSport, sentinelConfig);
       log(`Pipeline done — ${result.stats.totalPlayers} players`, 'info');
       log(`Phones extracted: ${result.stats.phonesExtracted}`, 'info');
       log(`Today < 0 removed: ${result.stats.removedToday}`, 'warn');
       log('Building output files…');
-      const outputFiles = buildAllExports(result);
+      const outputFiles = buildAllExports(result, sentinelConfig);
       log(`${outputFiles.length} files ready`, 'info');
+
       if (saveToFb) {
         log('Uploading to Firebase…');
         try {
@@ -121,6 +149,63 @@ export default function UploadPage({ onResult }) {
             Save run to Firebase
           </label>
         </div>
+      </div>
+
+      {/* Balise de fin (Sentinel) */}
+      <div className="card" style={{ marginBottom: '1.25rem', borderColor: sentinelActive ? 'var(--deposit)' : 'var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: sentinelActive ? '1rem' : 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={sentinelActive} onChange={e => setSentinelActive(e.target.checked)}
+                style={{ accentColor: 'var(--deposit)', width: 16, height: 16 }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: sentinelActive ? 'var(--deposit)' : 'var(--muted)' }}>
+                🏁 Balise de fin
+              </span>
+            </label>
+            <span style={{
+              fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 100,
+              background: sentinelActive ? 'var(--deposit-bg)' : 'var(--bg3)',
+              color: sentinelActive ? 'var(--deposit)' : 'var(--muted)'
+            }}>
+              {sentinelActive ? 'ACTIVE' : 'DÉSACTIVÉE'}
+            </span>
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--muted)', fontStyle: 'italic' }}>
+            Ajoutée en fin de chaque fichier généré
+          </span>
+        </div>
+
+        {sentinelActive && (
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Compte balise</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="number" value={sentinelAccount}
+                  onChange={e => setSentinelAccount(Number(e.target.value))}
+                  className="field-input" style={{ width: 130 }} />
+                <span style={{ fontSize: 11, color: 'var(--muted2)' }}>défaut : 1 326 274</span>
+              </div>
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Montant</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="number" value={sentinelAmount}
+                  onChange={e => setSentinelAmount(Number(e.target.value))}
+                  className="field-input" style={{ width: 90 }} />
+                <span style={{ fontSize: 11, color: 'var(--muted2)' }}>défaut : 1</span>
+              </div>
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>Monnaie</span>
+              <select value={sentinelCurrency} onChange={e => setSentinelCurrency(e.target.value)}
+                className="field-input" style={{ width: 100, cursor: 'pointer' }}>
+                {CURRENCIES.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
       </div>
 
       <button className="btn primary" disabled={!excelFile || !csvFile || running} onClick={runAll}
