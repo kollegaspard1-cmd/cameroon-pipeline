@@ -24,7 +24,7 @@ export default function ObjectifsPage({ onNavigate }) {
   const [logs,        setLogs]        = useState([]);
   const [result,      setResult]      = useState(null);
 
-  const { setObjectifsFiles, setSharedRecap, setSharedRecapName } = useAppContext();
+  const { setObjectifsFiles } = useAppContext();
   const csvRef   = useRef();
   const recapRef = useRef();
   const listRef  = useRef();
