@@ -3,8 +3,9 @@ import React, { useState, useRef } from 'react';
 import XLSX from 'xlsx-js-style';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
+import { useAppContext } from '../AppContext';
 
-export default function RapportsPage() {
+export default function RapportsPage({ onNavigate }) {
   const [betshopFile, setBetshopFile] = useState(null);
   const [objectifsFile, setObjectifsFile] = useState(null);
   const [recapFile, setRecapFile]     = useState(null);
@@ -15,9 +16,18 @@ export default function RapportsPage() {
   const [superList,   setSuperList]   = useState(null);
   const [selectedSup, setSelectedSup] = useState('');
   const [supResult,   setSupResult]   = useState(null);
+  const { objectifsFiles, sharedRecap, sharedRecapName } = useAppContext();
   const betRef  = useRef();
   const objRef  = useRef();
   const recRef  = useRef();
+
+  // Pre-load shared RECAP from Objectifs
+  React.useEffect(() => {
+    if (sharedRecap && !recapFile) {
+      setRecapFile(sharedRecap);
+      loadRecap(sharedRecap).then(rd => buildSuperList(rd)).catch(()=>{});
+    }
+  }, [sharedRecap]); // eslint-disable-line
 
   const log = (msg) => setLogs(p => [...p, msg]);
 
@@ -96,15 +106,28 @@ export default function RapportsPage() {
         if (hr === null) throw new Error("Colonne 'Tickets Objectif' introuvable");
         const headers = raw[hr].map(v => String(v).trim());
         const ocIdx  = headers.findIndex(h => h.toLowerCase().includes('tickets objectif'));
+        // Find salle and nom technique column indices
+        const salleIdx = headers.findIndex(h => h.toLowerCase().includes('salle') || h.toLowerCase() === 'salle');
+        const techIdx  = headers.findIndex(h => h.toLowerCase().includes('nom technique') || h.toLowerCase().includes('noms technique'));
         const tc2025 = headers.findIndex(h => h.toLowerCase().includes('tickets') && !h.toLowerCase().includes('objectif') && h.includes('2025'));
         const rows = [];
         for (let i = hr + 1; i < raw.length; i++) {
           const row = raw[i];
-          const salle = String(row[0] || '').trim();
-          if (!salle || /salle|objectif|total/i.test(salle)) continue;
+          // Try to get salle from dedicated column, fallback to col 0
+          const salleCol = salleIdx >= 0 ? salleIdx : 0;
+          const salle = String(row[salleCol] || '').trim();
+          const tech  = techIdx >= 0 ? String(row[techIdx] || '').trim() : '';
+          if (!salle || /^(salle|objectif|total|zone|super)/i.test(salle)) continue;
+          if (/^──/.test(salle)) continue; // skip group separators
           let obj = parseFloat(row[ocIdx]) || 0;
           if (obj === 0 && tc2025 >= 0) obj = Math.round((parseFloat(row[tc2025]) || 0) * 1.15);
-          rows.push({ _k: salle.toUpperCase().replace(/ /g,''), Tickets_Obj: obj });
+          const key1 = salle.toUpperCase().replace(/ /g,'');
+          const key2 = tech.toUpperCase().replace(/ /g,'');
+          // Push with both keys for flexible matching
+          rows.push({ _k: key1, _k2: key2, salle, tech, Tickets_Obj: obj });
+          if (key2 && key2 !== key1) {
+            rows.push({ _k: key2, _k2: key1, salle, tech, Tickets_Obj: obj });
+          }
         }
         log(`  Objectifs chargés : ${rows.length} salles`);
         res(rows);
@@ -168,7 +191,11 @@ export default function RapportsPage() {
   // ── Build master ────────────────────────────────
   const buildMaster = (recap, betRows, objRows) => {
     const betMap = {}; betRows.forEach(r => { betMap[r._k] = r; });
-    const objMap = {}; objRows.forEach(r => { objMap[r._k] = r; });
+    const objMap = {};
+    objRows.forEach(r => {
+      objMap[r._k] = r;
+      if (r._k2 && !objMap[r._k2]) objMap[r._k2] = r;
+    });
     const out = {};
     Object.entries(recap).forEach(([ville, rows]) => {
       out[ville] = rows.map(r => {
@@ -489,6 +516,36 @@ export default function RapportsPage() {
   return (
     <div>
       <p className="section-label">Réalisation vs Objectif</p>
+
+      {/* Jumelage A: Objectifs → Réalisation */}
+      {objectifsFiles && objectifsFiles.length > 0 && (
+        <div style={{ background:'var(--accent-dim)', border:'1px solid var(--accent)', borderRadius:'var(--radius)', padding:'12px 16px', marginBottom:'1.25rem' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:'8px' }}>
+            <span style={{ fontSize:20 }}>🔗</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:'var(--accent)' }}>
+                {objectifsFiles.length} fichier{objectifsFiles.length>1?'s':''} d'objectifs disponibles
+              </div>
+              {sharedRecapName && (
+                <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>
+                  ✓ RECAP pré-chargé : {sharedRecapName} {recapFile ? '(actif)' : '(chargement...)'}
+                </div>
+              )}
+            </div>
+          </div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', marginBottom:'8px' }}>
+            {objectifsFiles.map((f,i) => (
+              <span key={i} style={{ fontSize:11, padding:'3px 10px', borderRadius:100, background:'var(--accent-dim)', color:'var(--accent)', border:'1px solid var(--accent)', fontWeight:600 }}>
+                {f.filename}
+              </span>
+            ))}
+          </div>
+          <div style={{ fontSize:11, color:'var(--muted)' }}>
+            Uploadez le fichier Betshop pour compléter la Réalisation
+            {sharedRecapName ? ' — le RECAP est déjà pré-chargé ✓' : ''}
+          </div>
+        </div>
+      )}
 
       {/* Upload 3 fichiers */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>

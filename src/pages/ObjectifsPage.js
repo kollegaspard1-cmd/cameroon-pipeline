@@ -4,8 +4,9 @@ import Papa from 'papaparse';
 import XLSX from 'xlsx-js-style';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
+import { useAppContext } from '../AppContext';
 
-export default function ObjectifsPage() {
+export default function ObjectifsPage({ onNavigate }) {
   const [csvFile,     setCsvFile]     = useState(null);
   const [recapFile,   setRecapFile]   = useState(null);
   const [listFile,    setListFile]    = useState(null);
@@ -23,6 +24,7 @@ export default function ObjectifsPage() {
   const [logs,        setLogs]        = useState([]);
   const [result,      setResult]      = useState(null);
 
+  const { setObjectifsFiles, setSharedRecap, setSharedRecapName } = useAppContext();
   const csvRef   = useRef();
   const recapRef = useRef();
   const listRef  = useRef();
@@ -300,10 +302,23 @@ export default function ObjectifsPage() {
 
       const blob = await zip.generateAsync({ type:'blob' });
       const uniqueMissing = [...new Set(allMissing)];
-      setResult({ blob, filename:`Objectifs_${moisUp}${anneeN}.zip`, missing:uniqueMissing });
+      const zipBlob = blob;
+      setResult({ blob: zipBlob, filename:`Objectifs_${moisUp}${anneeN}.zip`, missing:uniqueMissing });
+      // Store for jumelage with Réalisation
+      setObjectifsFiles(prev => [...prev.filter(f=>f.mois!==`${moisUp} ${anneeN}`), {
+        blob: zipBlob, filename:`Objectifs_${moisUp}${anneeN}.zip`,
+        mois:`${moisUp} ${anneeN}`, type:'global'
+      }]);
       log(`\n✅ Terminé !${uniqueMissing.length ? ` ⚠️ ${uniqueMissing.length} salle(s) sans données CSV` : ''}`);
     } catch(err) { log(`❌ Erreur : ${err.message}`); }
     setRunning(false);
+  };
+
+  // ── Store individual result for jumelage ────────
+  const storeForRealisation = (blob, filename, moisLabel, type) => {
+    setObjectifsFiles(prev => [...prev.filter(f=>f.mois!==moisLabel||f.type!==type), {
+      blob, filename, mois: moisLabel, type
+    }]);
   };
 
   // ── Pipeline propriétaire ────────────────────────
@@ -354,6 +369,7 @@ export default function ObjectifsPage() {
       const blob = new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],
         {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
       setPropResult({ blob, filename, count:propRows.length, missing });
+      storeForRealisation(blob, filename, `${moisUp} ${anneeN}`, `prop_${selectedProp}`);
       log(`  ✅ ${filename} (${propRows.length} salles)`);
     } catch(err) { log(`❌ Erreur : ${err.message}`); }
   };
@@ -389,6 +405,7 @@ export default function ObjectifsPage() {
       const blob = new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],
         {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
       setSupResult({ blob, filename, count:rows.length, missing });
+      storeForRealisation(blob, filename, `${moisUp} ${anneeN}`, `super_${selectedSup}`);
       log(`  ✅ ${filename} (${rows.length} salles)`);
     } catch(err) { log(`❌ Erreur : ${err.message}`); }
   };
@@ -548,6 +565,7 @@ export default function ObjectifsPage() {
             className="btn success" style={{ fontSize:14, padding:'10px 24px', marginBottom:'1rem' }}>
             ⬇  Télécharger {result.filename}
           </button>
+
           {result.missing.length > 0 && (
             <div style={{ marginTop:'1rem' }}>
               <p style={{ color:'var(--casino)', fontSize:13, marginBottom:8, fontWeight:600 }}>
@@ -560,6 +578,38 @@ export default function ObjectifsPage() {
           )}
         </div>
       )}
+      {/* Jumelage — vers Réalisation */}
+      <JumelagePanel onNavigate={onNavigate} />
+    </div>
+  );
+}
+
+function JumelagePanel({ onNavigate }) {
+  const { objectifsFiles, sharedRecapName } = useAppContext();
+  if (!onNavigate || !objectifsFiles || objectifsFiles.length === 0) return null;
+  return (
+    <div className="card" style={{ marginTop:'1.5rem', borderColor:'var(--accent)' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:'0.75rem' }}>
+        <span style={{ fontSize:20 }}>🔗</span>
+        <div>
+          <div style={{ fontSize:13, fontWeight:700, color:'var(--accent)' }}>Fichiers prêts pour la Réalisation</div>
+          <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>
+            {objectifsFiles.length} fichier{objectifsFiles.length>1?'s':''} générés
+            {sharedRecapName ? ` · RECAP partagé : ${sharedRecapName}` : ''}
+          </div>
+        </div>
+        <button onClick={() => onNavigate('rapports')}
+          style={{ marginLeft:'auto', padding:'9px 18px', fontSize:13, background:'var(--accent)', color:'#fff', border:'none', borderRadius:'var(--radius)', cursor:'pointer', fontWeight:600 }}>
+          📈 Aller à la Réalisation →
+        </button>
+      </div>
+      <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+        {objectifsFiles.map((f,i) => (
+          <span key={i} style={{ fontSize:11, padding:'3px 10px', borderRadius:100, background:'var(--accent-dim)', color:'var(--accent)', fontWeight:600 }}>
+            {f.filename}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

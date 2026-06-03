@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import XLSX from 'xlsx-js-style';
 import { saveAs } from 'file-saver';
+import { useAppContext } from '../AppContext';
 
 const C = {
   dark_blue:'1F3864', mid_blue:'2E75B6', green_med:'375623', green_bg:'E2EFDA',
@@ -11,7 +12,7 @@ const C = {
 };
 const FMT_NB='#,##0', FMT_DIF='#,##0;[Red]-#,##0';
 
-function bdr() { const t={style:'thin',color:{argb:'FFBFBFBF'}}; return {top:t,bottom:t,left:t,right:t}; }
+function bdr() { const t={style:'thin',color:{rgb:'BFBFBF'}}; return {top:t,bottom:t,left:t,right:t}; }
 function fill(rgb) { return {patternType:'solid',fgColor:{rgb}}; }
 function fnt(bold=false,sz=10,rgb='000000') { return {name:'Arial',bold,sz,color:{rgb}}; }
 function aln(h='center',v='center',wrap=false) { return {horizontal:h,vertical:v,wrapText:wrap}; }
@@ -289,8 +290,9 @@ const MOIS_OPTIONS = [
   'Juillet','Août','Septembre','Octobre','Novembre','Décembre'
 ];
 
-export default function BetshopMultiPeriodesPage() {
+export default function BetshopMultiPeriodesPage({ onNavigate }) {
   const [annee, setAnnee]   = useState('2026');
+  const { betshopForMulti } = useAppContext();
   const [files, setFiles]   = useState([]); // [{mois, file, data}]
   const [running, setRunning] = useState(false);
   const [logs, setLogs]     = useState([]);
@@ -367,7 +369,36 @@ export default function BetshopMultiPeriodesPage() {
 
   return (
     <div>
-      {/* Sélection mois */}
+      {/* Jumelage B: Betshop Marchés → Multi-Périodes */}
+      {betshopForMulti && (
+        <div style={{ background:'var(--accent-dim)', border:'1px solid var(--accent)', borderRadius:'var(--radius)', padding:'10px 16px', marginBottom:'1.25rem', display:'flex', alignItems:'center', gap:'1rem', flexWrap:'wrap' }}>
+          <span style={{ fontSize:20 }}>🔗</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:13, fontWeight:600, color:'var(--accent)' }}>Fichier CAMPRESJ disponible depuis Betshop Par Marché</div>
+            <div style={{ fontSize:11, color:'var(--muted)', marginTop:2 }}>{betshopForMulti.file.name} · {betshopForMulti.mois}</div>
+          </div>
+          <button onClick={() => {
+            const moisLabel = betshopForMulti.mois;
+            const moisNom = moisLabel.split(' ')[0];
+            const anneeN = moisLabel.split(' ')[1] || annee;
+            setAnnee(anneeN);
+            const fullMois = `${moisNom} ${anneeN}`;
+            // Add the file to the files list
+            setFiles(prev => {
+              const exists = prev.find(f => f.mois === fullMois);
+              if (exists) return prev.map(f => f.mois === fullMois ? {...f, file: betshopForMulti.file, data: null} : f);
+              return [...prev, { mois: fullMois, file: betshopForMulti.file, data: null }];
+            });
+            // Load the data
+            handleFile(fullMois, betshopForMulti.file);
+          }}
+            style={{ padding:'7px 14px', fontSize:12, background:'var(--accent)', color:'#fff', border:'none', borderRadius:'var(--radius)', cursor:'pointer', fontWeight:600, whiteSpace:'nowrap' }}>
+            ➕ Pré-charger {betshopForMulti.mois}
+          </button>
+        </div>
+      )}
+
+  {/* Sélection mois */}
       <p className="section-label">1. Sélectionner les mois à analyser</p>
       <div className="card" style={{ marginBottom:'1.25rem' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'1rem', marginBottom:'1rem' }}>

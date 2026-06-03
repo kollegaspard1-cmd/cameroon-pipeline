@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import XLSX from 'xlsx-js-style';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
+import { useAppContext } from '../AppContext';
 
 // ── Palette ──────────────────────────────────────
 const C = {
@@ -90,7 +91,7 @@ function prepDf(rows) {
 // ── Sheet: Données ────────────────────────────────
 function buildOngData(wb, sheetName, df, titre, mois) {
   const ws={};
-  const nr=df.length;
+  const nr=df.length, totalR=5+nr+1;
   sc(ws,2,1,`${titre} | ${mois}  ·  ${df.length} salles`,tS(C.dark_blue,13));
   mg(ws,2,1,2,21);
 
@@ -490,7 +491,7 @@ function buildFileComplet(dfAll, dfCamp, label, mois, seuilP, seuilM) {
 }
 
 // ── Main Component ────────────────────────────────
-export default function BetshopMarchesPage() {
+export default function BetshopMarchesPage({ onNavigate }) {
   const [evalFile,   setEvalFile]   = useState(null);
   const [reportFile, setReportFile] = useState(null);
   const [mois,       setMois]       = useState('AVRIL 2026');
@@ -506,6 +507,7 @@ export default function BetshopMarchesPage() {
   const [selectedMarket,setSelectedMarket]= useState('');
   const [marketResult,  setMarketResult]  = useState(null);
 
+  const { setBetshopForMulti } = useAppContext();
   const evalRef   = useRef();
   const reportRef = useRef();
   const log = (msg) => setLogs(p => [...p, msg]);
@@ -583,7 +585,7 @@ export default function BetshopMarchesPage() {
         readXlsx(evalFile,'CAMPRESJ'),
         readXlsx(reportFile,'Sheet1'),
       ]);
-      buildMarketList(evalRows,reportRows);
+      const {list, campSet}=buildMarketList(evalRows,reportRows);
       const campSet2=new Set(evalRows.map(r=>r['Shop']||r['Betshop name']||''));
       log(`  ✓ Eval CAMPRESJ : ${campSet2.size} salles`);
       log(`  ✓ Report : ${reportRows.length} salles`);
@@ -631,6 +633,11 @@ export default function BetshopMarchesPage() {
 
       const blob=await zip.generateAsync({type:'blob'});
       setResult({blob,filename:`Betshop_Marches_${moisSafe}.zip`});
+      // Store CAMPRESJ file for jumelage with Multi-Périodes
+      const campresj_data = XLSX.write(buildFileMarche(df_camp_all,'CAMPRESJ',moisUp,seuilPlus,seuilMoins),{bookType:'xlsx',type:'array'});
+      const campresj_blob = new Blob([campresj_data],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const campresj_file = new File([campresj_blob], `Betshop_CAMPRESJ_${moisSafe}.xlsx`, {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      setBetshopForMulti({ mois: moisUp, file: campresj_file });
       log(`\n✅ Terminé !`);
     } catch(err){log(`❌ Erreur : ${err.message}`);}
     setRunning(false);
@@ -751,6 +758,12 @@ export default function BetshopMarchesPage() {
             className="btn success" style={{fontSize:14,padding:'10px 24px'}}>
             ⬇  Télécharger {result.filename}
           </button>
+          {onNavigate && (
+            <button onClick={() => onNavigate('betshop-periodes')}
+              style={{ marginLeft:'1rem', padding:'10px 20px', fontSize:13, background:'var(--accent-dim)', color:'var(--accent)', border:'1px solid var(--accent)', borderRadius:'var(--radius)', cursor:'pointer', fontWeight:600 }}>
+              📅 Analyser en Multi-Périodes →
+            </button>
+          )}
         </div>
       )}
     </div>
