@@ -16,7 +16,7 @@ const NAV = [
   {
     section: 'Pipeline CM',
     items: [
-      { id: 'upload',      label: 'Run Pipeline',   icon: '⚡' },
+      { id: 'upload',      label: 'Daily Retention', icon: '⚡' },
       { id: 'result',      label: 'Results',         icon: '📊', requiresResult: true },
       { id: 'history',     label: 'History',          icon: '🕐' },
     ]

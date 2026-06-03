@@ -16,7 +16,9 @@ export default function ResultPage({ result }) {
   const dd = String(today.getDate()).padStart(2,'0');
   const mm = String(today.getMonth()+1).padStart(2,'0');
   const yy = String(today.getFullYear()).slice(-2);
-  const finalName = `CM_Daily_${dd}.${mm}.${yy}.xlsx`;
+  // Match any country prefix (CM_, TZ_, KE_, etc.)
+  const finalName = outputFiles.find(f => f.filename.match(/^[A-Z]{2}_Daily_/))?.filename
+    || `CM_Daily_${dd}.${mm}.${yy}.xlsx`;
 
   const campaignGroups = [
     { key:'main',   label:'Main output',          tag:'blue',
@@ -24,7 +26,7 @@ export default function ResultPage({ result }) {
     { key:'casino', label:'Casino campaigns',      tag:'amber',
       files: outputFiles.filter(f => ['casino_bonus_cm.csv','Daily_Cashback_Template.csv','spribe_freebets.csv'].includes(f.filename)) },
     { key:'sport',  label:'Sport bonus campaigns', tag:'green',
-      files: outputFiles.filter(f => f.filename.startsWith('CM_daily_')) },
+      files: outputFiles.filter(f => f.filename.startsWith('CM_daily_') || f.filename.startsWith('Sport_Daily_')) },
   ];
 
   async function downloadAll() {
@@ -97,8 +99,8 @@ function getFileDescription(filename, campaigns) {
   if (filename === 'casino_bonus_cm.csv')      return 'Casino bonus players — account_id + amount + XAF';
   if (filename === 'Daily_Cashback_Template.csv') return 'Cash offer players — casino game, no specific preference';
   if (filename === 'spribe_freebets.csv')      return 'Aviator freebet players — 5 freebets, 7-day validity';
-  if (filename.startsWith('CM_daily_')) {
-    const amt = filename.replace('CM_daily_','').replace('.csv','');
+  if (filename.startsWith('CM_daily_') || filename.startsWith('Sport_Daily_')) {
+    const amt = filename.replace('CM_daily_','').replace('Sport_Daily_','').replace('.csv','');
     return `Sport bonus — amount = ${Number(amt).toLocaleString()} XAF`;
   }
   return '';

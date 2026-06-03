@@ -337,51 +337,57 @@ export function exportXLSX(rows, sheetName, filename) {
   return { blob, filename };
 }
 
-export function buildAllExports(result, sentinelConfig = null) {
+export function buildAllExports(result, sentinelConfig = null, countryConfig = null) {
   const files = [];
 
-  // CM_Daily_DD.MM.YY.xlsx (MTD sheet)
+  // Daily_DD.MM.YY.xlsx (MTD sheet)
   const d = new Date();
   const dd = String(d.getDate()).padStart(2, '0');
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const yy = String(d.getFullYear()).slice(-2);
-  const finalName = `CM_Daily_${dd}.${mm}.${yy}.xlsx`;
+  const prefix = countryConfig?.prefix || 'CM';
+  const currency = sentinelConfig?.currency || countryConfig?.currency || 'XAF';
+  const finalName = `${prefix}_Daily_${dd}.${mm}.${yy}.xlsx`;
   files.push(exportXLSX(result.mtd, 'MTD', finalName));
 
   // Cameroon_YTD_phones.xlsx
   files.push(exportXLSX(result.phones, 'Phones', 'Cameroon_YTD_phones.xlsx'));
 
   // casino_bonus_cm.csv
+  // Update currency in all casino_bonus rows
+  const cbBase = result.campaigns.casino_bonus_cm.map(r => ({...r, currency}));
   const cbRows = sentinelConfig
-    ? [...result.campaigns.casino_bonus_cm, { account_id: sentinelConfig.account, amount: sentinelConfig.amount, currency: sentinelConfig.currency }]
-    : result.campaigns.casino_bonus_cm;
+    ? [...cbBase, { account_id: sentinelConfig.account, amount: sentinelConfig.amount, currency }]
+    : cbBase;
   files.push(exportCSV(cbRows, 'casino_bonus_cm.csv'));
 
   // Daily cashback
+  const cashBase = result.campaigns.daily_cashback.map(r => ({...r, currency_iso3: currency}));
   const cashRows = sentinelConfig
-    ? [...result.campaigns.daily_cashback, { account_id: sentinelConfig.account, ' amount ': sentinelConfig.amount, currency_iso3: sentinelConfig.currency }]
-    : result.campaigns.daily_cashback;
+    ? [...cashBase, { account_id: sentinelConfig.account, ' amount ': sentinelConfig.amount, currency_iso3: currency }]
+    : cashBase;
   files.push(exportCSV(cashRows, 'Daily_Cashback_Template.csv'));
 
   // spribe_freebets.csv
+  const spribeBase = result.campaigns.spribe_freebets.map(r => ({...r, currency}));
   const spribeRows = sentinelConfig ? (() => {
-    const d = new Date();
-    const todayStr = format(d, 'yyyy-MM-dd');
-    const endStr = format(addDays(d, 7), 'yyyy-MM-dd');
-    return [...result.campaigns.spribe_freebets, {
-      opPlayerId: sentinelConfig.account, currency: sentinelConfig.currency,
+    const d2 = new Date();
+    const todayStr = format(d2, 'yyyy-MM-dd');
+    const endStr = format(addDays(d2, 7), 'yyyy-MM-dd');
+    return [...spribeBase, {
+      opPlayerId: sentinelConfig.account, currency,
       ticketAmount_amount: sentinelConfig.amount, num_of_free_ticketAmounts: 5,
       start_date: todayStr, end_date: endStr, game: 'AVIATOR'
     }];
-  })() : result.campaigns.spribe_freebets;
+  })() : spribeBase;
   files.push(exportCSV(spribeRows, 'spribe_freebets.csv'));
 
-  // CM_daily_XXX.csv files
+  // Sport_Daily_XXX.csv files (renamed from CM_daily)
   for (const [amt, rows] of Object.entries(result.campaigns.cm_daily)) {
     const dailyRows = sentinelConfig
       ? [...rows, { id: sentinelConfig.account, amount: sentinelConfig.amount }]
       : rows;
-    files.push(exportCSV(dailyRows, `CM_daily_${amt}.csv`));
+    files.push(exportCSV(dailyRows, `Sport_Daily_${amt}.csv`));
   }
 
   return files;
