@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { runPipeline, readExcelSheets, readCSV, buildAllExports } from '../lib/pipeline';
 import { saveRun } from '../lib/runHistory';
-import { loadRulesForCountry, DEFAULT_RULES, applyRules } from '../lib/roundingRules';
+import { loadRulesForCountry, DEFAULT_RULES } from '../lib/roundingRules';
 import RulesEditor from '../components/RulesEditor';
 
 // ── Countries with flags, currencies and languages ──
@@ -113,7 +113,6 @@ export default function UploadPage({ onResult }) {
   const [sentinelCurrency, setSentinelCurrency] = useState('XAF');
 
   const [roundingRules, setRoundingRules] = useState([...DEFAULT_RULES]);
-  const [rulesLoaded,   setRulesLoaded]   = useState(false);
   const [showRulesEditor, setShowRulesEditor] = useState(false);
 
   const excelRef = useRef();
@@ -131,10 +130,8 @@ export default function UploadPage({ onResult }) {
     try {
       const saved = await loadRulesForCountry(code);
       setRoundingRules(saved || [...DEFAULT_RULES]);
-      setRulesLoaded(true);
     } catch(e) {
       setRoundingRules([...DEFAULT_RULES]);
-      setRulesLoaded(true);
     }
   };
 
