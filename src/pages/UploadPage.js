@@ -290,7 +290,7 @@ export default function UploadPage({ onResult }) {
             style={{ padding:'7px 14px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer',
               border:'1px solid var(--accent)', background:'var(--accent-dim)', color:'var(--accent)',
               marginLeft:'auto' }}>
-            ⚙️ {lang === 'FR' ? 'Règles arrondi' : 'Rounding rules'}
+            ⚙️ {lang === 'FR' ? 'Regles arrondi' : 'Rounding rules'}
             <span style={{ marginLeft:6, fontSize:10, padding:'1px 6px', borderRadius:10,
               background:'var(--accent)', color:'#fff' }}>
               {roundingRules.length}

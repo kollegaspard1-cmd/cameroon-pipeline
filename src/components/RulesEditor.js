@@ -15,11 +15,11 @@ const OPERATORS = [
 
 const T = {
   FR: {
-    title:        'Règles d\'arrondi',
-    subtitle:     'Définit comment les montants bonus sont arrondis',
+    title:        'Regles arrondi',
+    subtitle:     'Comment les montants bonus sont arrondis',
     condition:    'Condition',
     threshold:    'Seuil',
-    step:         'Pas d\'arrondi',
+    step:         'Pas arrondi',
     label:        'Libellé',
     add:          '+ Ajouter une règle',
     save:         '💾 Sauvegarder',
@@ -180,8 +180,8 @@ export default function RulesEditor({ rules, onChange, countryCode, lang = 'FR',
 
   const downloadTemplate = () => {
     const templateRows = [
-      { [lang==='FR'?'Libellé':'Label']: lang==='FR'?'< 1 000':'< 1,000', [lang==='FR'?'Condition':'Condition']: COND_LABELS['lt'], [lang==='FR'?'Seuil':'Threshold']: 1000, [lang==='FR'?'Pas d'arrondi':'Rounding step']: 100 },
-      { [lang==='FR'?'Libellé':'Label']: lang==='FR'?'≥ 1 000':'≥ 1,000', [lang==='FR'?'Condition':'Condition']: COND_LABELS['gte'], [lang==='FR'?'Seuil':'Threshold']: 1000, [lang==='FR'?'Pas d'arrondi':'Rounding step']: 500 },
+      { [lang==='FR'?'Libellé':'Label']: lang==='FR'?'< 1 000':'< 1,000', [lang==='FR'?'Condition':'Condition']: COND_LABELS['lt'], [lang==='FR'?'Seuil':'Threshold']: 1000, [lang==='FR'?'Pas arrondi':'Rounding step']: 100 },
+      { [lang==='FR'?'Libellé':'Label']: lang==='FR'?'≥ 1 000':'≥ 1,000', [lang==='FR'?'Condition':'Condition']: COND_LABELS['gte'], [lang==='FR'?'Seuil':'Threshold']: 1000, [lang==='FR'?'Pas arrondi':'Rounding step']: 500 },
     ];
     const ws = XLSX.utils.json_to_sheet(templateRows);
     const headers = Object.keys(templateRows[0]);
