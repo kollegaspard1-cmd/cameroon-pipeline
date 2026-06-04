@@ -1,4 +1,4 @@
-/* src/App.css — Pipeline CM · Light Professional Theme */
+/* src/App.css — Pipeline CM · Light Professional Theme + Mobile Responsive */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,6 +35,9 @@
   --shadow:   0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md:0 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
 
+  --sidebar-w: 220px;
+  --topbar-h:  56px;
+
   font-size: 15px;
 }
 
@@ -48,9 +51,34 @@ body {
 /* ── Layout ─────────────────────────────────────── */
 .app { display: flex; min-height: 100vh; }
 
+/* ── Hamburger button (mobile only) ─────────────── */
+.hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px; height: 40px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Sidebar overlay (mobile) ───────────────────── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 99;
+}
+.sidebar-overlay.open { display: block; }
+
 /* ── Sidebar ─────────────────────────────────────── */
 .sidebar {
-  width: 220px;
+  width: var(--sidebar-w);
   min-height: 100vh;
   background: var(--sidebar);
   display: flex;
@@ -58,6 +86,7 @@ body {
   position: fixed;
   left: 0; top: 0;
   z-index: 100;
+  transition: transform 0.25s ease;
 }
 
 .sidebar-brand {
@@ -135,18 +164,19 @@ body {
 
 /* ── Main content ─────────────────────────────────── */
 .main-wrapper {
-  margin-left: 220px;
+  margin-left: var(--sidebar-w);
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .topbar {
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
   padding: 0 2rem;
-  height: 56px;
-  display: flex; align-items: center; justify-content: space-between;
+  height: var(--topbar-h);
+  display: flex; align-items: center; gap: 12px;
   position: sticky; top: 0; z-index: 50;
   box-shadow: var(--shadow);
 }
@@ -307,7 +337,7 @@ body {
 .file-row:hover { border-color: var(--accent); }
 .file-row-name { font-size: 13px; font-weight: 500; font-family: 'JetBrains Mono', monospace; color: var(--text); }
 .file-row-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.file-row-actions { display: flex; gap: 6px; }
+.file-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* ── Tags / badges ───────────────────────────────── */
 .tag {
@@ -371,6 +401,7 @@ body {
 /* ── Category header strip ───────────────────────── */
 .category-strip {
   display: flex; gap: 6px; margin-bottom: 1.25rem;
+  flex-wrap: wrap;
 }
 .category-pill {
   display: flex; align-items: center; gap: 6px;
@@ -399,3 +430,136 @@ body {
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ════════════════════════════════════════════════════
+   RESPONSIVE MOBILE — Tablet ≤ 768px
+   ════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* Sidebar cachée par défaut, glisse en overlay */
+  .sidebar {
+    transform: translateX(-100%);
+    width: 260px;
+    box-shadow: var(--shadow-md);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Hamburger visible */
+  .hamburger { display: flex; }
+
+  /* Main wrapper prend toute la largeur */
+  .main-wrapper { margin-left: 0; }
+
+  /* Topbar */
+  .topbar {
+    padding: 0 1rem;
+    gap: 8px;
+  }
+  .topbar-sub { display: none; }
+  .topbar-title { font-size: 14px; }
+
+  /* Main padding réduit */
+  .main { padding: 1rem; }
+
+  /* Cards */
+  .card { padding: 1rem; }
+
+  /* Grilles 2 colonnes → 1 colonne */
+  div[style*="gridTemplateColumns: '1fr 1fr'"],
+  div[style*='gridTemplateColumns: "1fr 1fr"'],
+  div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Drop zones */
+  .drop-zone { padding: 1.25rem 1rem; }
+
+  /* KPI banner — colonnes adaptées */
+  .kpi-banner {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .kpi-item {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .kpi-value { font-size: 20px; }
+
+  /* Stat grid */
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .stat-value { font-size: 22px; }
+
+  /* Boutons — plus grands pour les doigts */
+  .btn {
+    padding: 11px 16px;
+    font-size: 13px;
+    min-height: 44px;
+  }
+  .field-input {
+    padding: 10px 12px;
+    font-size: 14px;
+    min-height: 44px;
+  }
+
+  /* File rows */
+  .file-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .file-row-actions { width: 100%; justify-content: flex-end; }
+
+  /* Paramètres — flex en colonne */
+  div[style*="display: 'flex'"][style*="gap: '2rem'"],
+  div[style*='display: "flex"'][style*='gap: "2rem"'] {
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+
+  /* Historique table — scroll horizontal */
+  .hist-table { font-size: 11px; }
+  .hist-table th, .hist-table td { padding: 8px 10px; }
+
+  /* Log console */
+  .log-console { font-size: 11px; max-height: 140px; }
+
+  /* Modal (RulesEditor) */
+  div[style*="maxWidth: 680"] {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    padding: 1rem !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   RESPONSIVE MOBILE — Small phones ≤ 480px
+   ════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+
+  :root { font-size: 14px; }
+
+  .topbar { padding: 0 0.75rem; }
+  .main   { padding: 0.75rem; }
+  .card   { padding: 0.875rem; }
+
+  /* KPI banner — 1 colonne sur très petit écran */
+  .kpi-banner { grid-template-columns: 1fr !important; }
+  .kpi-item { border-right: none; }
+
+  /* Stat grid */
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* Drop zone plus compacte */
+  .drop-zone { padding: 1rem 0.75rem; }
+  .drop-icon { font-size: 22px; }
+
+  /* Buttons full width */
+  .btn.primary { width: 100%; justify-content: center; }
+
+  /* Section label */
+  .section-label { font-size: 10px; }
+
+  /* Topbar title */
+  .topbar-title { font-size: 13px; }
+}

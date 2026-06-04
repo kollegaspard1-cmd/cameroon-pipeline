@@ -69,10 +69,12 @@ const TITLES = {
 
 export default function App() {
   const [page, setPage]                     = useState('upload');
+  const [sidebarOpen, setSidebarOpen]       = useState(false);
   const [pipelineResult, setPipelineResult] = useState(null);
   const [mgmResults, setMgmResults]         = useState(null);
 
-  function handleResult(result) { setPipelineResult(result); setPage('result'); }
+  function handleResult(result) { setPipelineResult(result); setPage('result'); setSidebarOpen(false); }
+  const navigate = (p) => { setPage(p); setSidebarOpen(false); };
   const mgmTab = page.startsWith('mgm-') ? page.replace('mgm-', '') : null;
   const mgmCounts = {
     sport:   mgmResults?.sport?.length   || 0,
@@ -83,7 +85,11 @@ export default function App() {
   return (
     <AppProvider>
       <div className="app">
-        <aside className="sidebar">
+        {/* Mobile overlay */}
+        <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+          onClick={() => setSidebarOpen(false)} />
+
+        <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="sidebar-brand">
             <div className="brand-logo"><span className="brand-dot" /><span className="brand-name">Pipeline CM</span></div>
             <div className="brand-sub">Cameroon Operations</div>
@@ -100,7 +106,7 @@ export default function App() {
                   return (
                     <button key={item.id}
                       className={`nav-btn ${page === item.id ? 'active' : ''}`}
-                      onClick={() => !disabled && setPage(item.id)}
+                      onClick={() => !disabled && navigate(item.id)}
                       disabled={disabled}
                       style={isMgmSub ? { paddingLeft:28 } : {}}>
                       <span className="nav-icon" style={isMgmSub?{fontSize:13}:{}}>{item.icon}</span>
@@ -116,6 +122,8 @@ export default function App() {
 
         <div className="main-wrapper">
           <header className="topbar">
+            <button className="hamburger" onClick={() => setSidebarOpen(o => !o)}
+              aria-label="Menu">☰</button>
             <span className="topbar-title">{TITLES[page]?.title}</span>
             <span className="topbar-sub">— {TITLES[page]?.sub}</span>
           </header>
