@@ -2,6 +2,8 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { runPipeline, readExcelSheets, readCSV, buildAllExports } from '../lib/pipeline';
 import { saveRun } from '../lib/runHistory';
+import { loadRulesForCountry, DEFAULT_RULES, applyRules } from '../lib/roundingRules';
+import RulesEditor from '../components/RulesEditor';
 
 // ── Countries with flags, currencies and languages ──
 const COUNTRIES = [
@@ -110,18 +112,36 @@ export default function UploadPage({ onResult }) {
   const [sentinelAmount,   setSentinelAmount]   = useState(1);
   const [sentinelCurrency, setSentinelCurrency] = useState('XAF');
 
+  const [roundingRules, setRoundingRules] = useState([...DEFAULT_RULES]);
+  const [rulesLoaded,   setRulesLoaded]   = useState(false);
+  const [showRulesEditor, setShowRulesEditor] = useState(false);
+
   const excelRef = useRef();
   const csvRef   = useRef();
 
   const T = TRANSLATIONS[lang];
   const currentCountry = COUNTRIES.find(c => c.code === country) || COUNTRIES[0];
 
-  // Auto-update currency when country changes
-  const handleCountryChange = (code) => {
+  // Auto-update currency and load rules when country changes
+  const handleCountryChange = async (code) => {
     setCountry(code);
     const c = COUNTRIES.find(x => x.code === code);
     if (c) setSentinelCurrency(c.currency);
+    // Load rules from Firebase
+    try {
+      const saved = await loadRulesForCountry(code);
+      setRoundingRules(saved || [...DEFAULT_RULES]);
+      setRulesLoaded(true);
+    } catch(e) {
+      setRoundingRules([...DEFAULT_RULES]);
+      setRulesLoaded(true);
+    }
   };
+
+  // Load rules for default country on mount
+  React.useEffect(() => {
+    handleCountryChange('CM');
+  }, []); // eslint-disable-line
 
   const log = useCallback((msg, type = 'normal') => {
     setLogs(l => [...l, { msg, type, t: new Date().toLocaleTimeString() }]);
@@ -160,7 +180,7 @@ export default function UploadPage({ onResult }) {
         log(`Balise de fin — Compte: ${sentinelAccount}, Montant: ${sentinelAmount} ${sentinelCurrency}`, 'info');
       }
 
-      const result = runPipeline(sheets, csvRows, (msg, pct) => { log(msg); setProgress(pct); }, threshold, maxSport, sentinelConfig);
+      const result = runPipeline(sheets, csvRows, (msg, pct) => { log(msg); setProgress(pct); }, threshold, maxSport, sentinelConfig, roundingRules);
       log(`Pipeline done — ${result.stats.totalPlayers} players`, 'info');
       log(`Phones extracted: ${result.stats.phonesExtracted}`, 'info');
       log(`Today < 0 removed: ${result.stats.removedToday}`, 'warn');
@@ -266,8 +286,29 @@ export default function UploadPage({ onResult }) {
               style={{ accentColor: 'var(--accent)', width: 15, height: 15 }} />
             {T.saveFirebase}
           </label>
+          <button onClick={() => setShowRulesEditor(true)}
+            style={{ padding:'7px 14px', borderRadius:6, fontSize:12, fontWeight:600, cursor:'pointer',
+              border:'1px solid var(--accent)', background:'var(--accent-dim)', color:'var(--accent)',
+              marginLeft:'auto' }}>
+            ⚙️ {lang === 'FR' ? 'Règles arrondi' : 'Rounding rules'}
+            <span style={{ marginLeft:6, fontSize:10, padding:'1px 6px', borderRadius:10,
+              background:'var(--accent)', color:'#fff' }}>
+              {roundingRules.length}
+            </span>
+          </button>
         </div>
       </div>
+
+      {/* Rules Editor Modal */}
+      {showRulesEditor && (
+        <RulesEditor
+          rules={roundingRules}
+          onChange={setRoundingRules}
+          countryCode={country}
+          lang={lang}
+          onClose={() => setShowRulesEditor(false)}
+        />
+      )}
 
       {/* Balise de fin */}
       <div className="card" style={{ marginBottom: '1.25rem', borderColor: sentinelActive ? 'var(--deposit)' : 'var(--border)' }}>
