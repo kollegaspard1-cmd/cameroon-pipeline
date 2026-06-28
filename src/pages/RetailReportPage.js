@@ -1703,7 +1703,23 @@ Net: €${net.toFixed(2)}`}
             <div style={{ flex:1 }}/>
             {/* Filtres Zone / Super / Propriétaire */}
             {zoneList.length > 0 && (
-              <select value={filterZone} onChange={e => { setFilterZone(e.target.value); setFilterSuper(''); setPage(1); }}
+              <select value={filterZone} onChange={e => {
+                const newZone = e.target.value;
+                setFilterZone(newZone);
+                setFilterCity('');
+                setPage(1);
+                // Auto-sélectionner le super si la zone n'en a qu'un seul
+                if (newZone && monthData) {
+                  const nrm2 = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+                  const supers = [...new Set(Object.values(monthData.betshop)
+                    .filter(b => { const ri = recapLookup[nrm2(b.name)]||{}; return ri.zone === newZone; })
+                    .map(b => { const ri = recapLookup[nrm2(b.name)]||{}; return ri.super||''; })
+                    .filter(Boolean))];
+                  setFilterSuper(supers.length === 1 ? supers[0] : '');
+                } else {
+                  setFilterSuper('');
+                }
+              }}
                 className="field-input" style={{ fontSize:11, minWidth:100 }}>
                 <option value="">🌍 Zone</option>
                 {zoneList.map(z => <option key={z} value={z}>{z}</option>)}
