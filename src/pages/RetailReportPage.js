@@ -372,7 +372,6 @@ export default function RetailReportPage() {
   const [filterProp,  setFilterProp]  = useState(''); // filtre actif propriétaire
   const [filterCity,  setFilterCity]  = useState(''); // filtre actif ville
   const [cityLookup,  setCityLookup]  = useState({}); // betshopName → city
-  const cityRef = useRef();
   const [showPerfColCfg, setShowPerfColCfg] = useState(false);
   const [visiblePerfCols, setVisiblePerfCols] = useState([
     'shifts','payin_count','payin_money','paid_out','balance','dep_eur','wd_eur'
@@ -394,27 +393,6 @@ export default function RetailReportPage() {
   const [cmpKpi,    setCmpKpi]    = useState('tickets');  // 'tickets' | 'payin' | 'dep' | 'wd'
   const [cmpTop,    setCmpTop]    = useState(10);         // Nb entités affichées
   const [cmpSearch, setCmpSearch] = useState('');         // Filtre recherche entité
-
-  // ── Charger cityMap depuis fichier LISTE XLSX local ──
-  const loadCityMapLocal = (file) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const wb2  = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
-        const ws2  = wb2.Sheets[wb2.SheetNames[0]];
-        const rows2 = XLSX.utils.sheet_to_json(ws2, { header:1, defval:'' });
-        const nrm2 = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
-        const clk  = {};
-        rows2.slice(1).forEach(r => {
-          const shop = String(r[2]||'').trim(); // col C = Shop
-          const city = String(r[3]||'').trim(); // col D = City
-          if (shop && city) clk[nrm2(shop)] = city;
-        });
-        setCityLookup(clk);
-      } catch(err) { console.warn('cityMap load error', err); }
-    };
-    reader.readAsArrayBuffer(file);
-  };
 
   // ── Charger RECAP (zone/super) + LISTE (propriétaires) depuis Firebase ──
   React.useEffect(() => {
@@ -450,8 +428,9 @@ export default function RetailReportPage() {
           setPropLookup(plk);
         }
         // Charger aussi le cityLookup si disponible dans Firebase
-        if (res2?.cityMap && Object.keys(res2.cityMap).length > 0) {
+        if (res2?.cityMap) {
           const clk = {};
+          // cityMap format : { shopName → city }
           Object.entries(res2.cityMap).forEach(([shop, city]) => {
             if (shop && city) clk[nrm(shop)] = city;
           });
@@ -519,7 +498,7 @@ export default function RetailReportPage() {
         zone:  ri.zone  || '',
         super: ri.super || '',
         prop:  propLookup[matchKey] || '',
-        city:  cityLookup[matchKey] || '',
+        city:  cityLookup[matchKey] || r.market || '',
       };
     });
   }, [monthData, recapLookup, propLookup, cityLookup]);
@@ -538,7 +517,7 @@ export default function RetailReportPage() {
         zone:  ri.zone  || '',
         super: ri.super || '',
         prop:  propLookup[matchKey] || '',
-        city:  cityLookup[matchKey] || '',
+        city:  cityLookup[matchKey] || r.market || '',
       };
     });
   }, [monthData, subTab, recapLookup, propLookup, cityLookup]);
@@ -547,17 +526,11 @@ export default function RetailReportPage() {
   const zoneList  = useMemo(() => {
     if (!monthData) return [];
     const nrm = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
-    return [...new Set(Object.values(monthData.betshop)
-      .filter(b => {
-        if (!filterSuper) return true;
-        const ri = recapLookup[nrm(b.name)] || {};
-        return ri.super === filterSuper;
-      })
-      .map(b => {
-        const ri = recapLookup[nrm(b.name)] || {};
-        return ri.zone || '';
-      }).filter(Boolean))].sort();
-  }, [monthData, recapLookup, filterSuper]);
+    return [...new Set(Object.values(monthData.betshop).map(b => {
+      const ri = recapLookup[nrm(b.name)] || {};
+      return ri.zone || '';
+    }).filter(Boolean))].sort();
+  }, [monthData, recapLookup]);
   const superList = useMemo(() => {
     if (!monthData) return [];
     const nrm = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
@@ -575,28 +548,14 @@ export default function RetailReportPage() {
   const propList  = useMemo(() => {
     if (!monthData) return [];
     const nrm = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
-    return [...new Set(Object.values(monthData.betshop)
-      .filter(b => {
-        const ri = recapLookup[nrm(b.name)] || {};
-        if (filterZone  && ri.zone  !== filterZone)  return false;
-        if (filterSuper && ri.super !== filterSuper) return false;
-        return true;
-      })
-      .map(b => propLookup[nrm(b.name)] || '')
-      .filter(Boolean))].sort();
-  }, [monthData, propLookup, recapLookup, filterZone, filterSuper]);
-  // cityList = vraies villes (depuis cityLookup Firebase) filtrées selon filtres actifs
+    return [...new Set(Object.values(monthData.betshop).map(b => {
+      return propLookup[nrm(b.name)] || '';
+    }).filter(Boolean))].sort();
+  }, [monthData, propLookup]);
+  // cityList = marchés distincts depuis betshopRows (stable quel que soit subTab)
   const cityList  = useMemo(() => {
-    const nrm = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
-    return [...new Set(betshopRows
-      .filter(r =>
-        (!filterZone  || r.zone  === filterZone)  &&
-        (!filterSuper || r.super === filterSuper) &&
-        (!filterProp  || r.prop  === filterProp)
-      )
-      .map(r => cityLookup[nrm(r.name)] || '')
-      .filter(Boolean))].sort();
-  }, [betshopRows, cityLookup, filterZone, filterSuper, filterProp]);
+    return [...new Set(betshopRows.map(r => r.market||'').filter(Boolean))].sort();
+  }, [betshopRows]);
 
   const filtered = useMemo(() => {
     let rows = perfRows;
@@ -604,7 +563,7 @@ export default function RetailReportPage() {
     if (filterZone)  rows = rows.filter(r => r.zone  === filterZone);
     if (filterSuper) rows = rows.filter(r => r.super === filterSuper);
     if (filterProp)  rows = rows.filter(r => r.prop  === filterProp);
-    if (filterCity)  rows = rows.filter(r => r.city === filterCity);
+    if (filterCity)  rows = rows.filter(r => (r.market||'') === filterCity);
     // ── Filtre texte ──
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -642,7 +601,7 @@ export default function RetailReportPage() {
         (!filterZone  || r.zone   === filterZone)  &&
         (!filterSuper || r.super  === filterSuper) &&
         (!filterProp  || r.prop   === filterProp)  &&
-        (!filterCity  || r.city === filterCity)
+        (!filterCity  || (r.market||'') === filterCity)
       );
       const bsNames = new Set(bsFiltered.map(b => b.name));
       const csFiltered = Object.values(monthData.cashier).filter(r => bsNames.has(r.betshop));
@@ -1710,33 +1669,23 @@ Net: €${net.toFixed(2)}`}
               </select>
             )}
             {superList.length > 0 && (
-              <select value={filterSuper} onChange={e => { setFilterSuper(e.target.value); setFilterZone(''); setFilterProp(''); setPage(1); }}
+              <select value={filterSuper} onChange={e => { setFilterSuper(e.target.value); setPage(1); }}
                 className="field-input" style={{ fontSize:11, minWidth:120 }}>
                 <option value="">👤 Superviseur</option>
                 {superList.filter(s => !filterZone || (store?.[country]?.[month]?.betshop && Object.values(store[country][month].betshop).some(b=>b.zone===filterZone&&b.super===s))).map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             )}
             {propList.length > 0 && (
-              <select value={filterProp} onChange={e => { setFilterProp(e.target.value); setFilterCity(''); setPage(1); }}
+              <select value={filterProp} onChange={e => { setFilterProp(e.target.value); setPage(1); }}
                 className="field-input" style={{ fontSize:11, minWidth:120 }}>
                 <option value="">🏠 Propriétaire</option>
                 {propList.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             )}
-            {/* Bouton chargement liste salles pour cityMap */}
-            <input ref={cityRef} type="file" accept=".xlsx" hidden
-              onChange={e => { if(e.target.files[0]) { loadCityMapLocal(e.target.files[0]); } e.target.value=''; }}/>
-            {cityList.length === 0 && Object.keys(cityLookup).length === 0 && (
-              <button onClick={() => cityRef.current.click()} title="Charger la liste des salles pour activer le filtre Ville"
-                style={{ fontSize:10, padding:'4px 8px', borderRadius:5, border:'1px dashed var(--border)',
-                  background:'transparent', color:'var(--muted)', cursor:'pointer', whiteSpace:'nowrap' }}>
-                🏙️ + Liste salles
-              </button>
-            )}
             {cityList.length > 0 && (
               <select value={filterCity} onChange={e => { setFilterCity(e.target.value); setPage(1); }}
                 className="field-input" style={{ fontSize:11, minWidth:110 }}>
-                <option value="">🏙️ Ville</option>
+                <option value="">🏙️ Marché / Ville</option>
                 {cityList.map(ci => <option key={ci} value={ci}>{ci}</option>)}
               </select>
             )}
