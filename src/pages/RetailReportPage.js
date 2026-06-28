@@ -1687,7 +1687,8 @@ Net: €${net.toFixed(2)}`}
       {/* ── Performance tab ── */}
       {mainTab === 'performance' && (
         <>
-          <div style={{ display:'flex', gap:6, marginBottom:10 }}>
+          {/* Ligne 1 : sous-onglets */}
+          <div style={{ display:'flex', gap:6, marginBottom:6 }}>
             {[
               { k:'betshop', label:`🏪 Par Betshop (${monthData ? Object.keys(monthData.betshop).length : 0})` },
               { k:'cashier', label:`👤 Par Caissier (${monthData ? Object.keys(monthData.cashier).length : 0})` },
@@ -1700,6 +1701,9 @@ Net: €${net.toFixed(2)}`}
                 boxShadow: subTab===t.k ? '0 0 0 1px var(--border)' : 'none',
               }}>{t.label}</button>
             ))}
+          </div>
+          {/* Ligne 2 : filtres + actions + recherche */}
+          <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap', alignItems:'center' }}>
             <div style={{ flex:1 }}/>
             {/* Filtres Zone / Super / Propriétaire */}
             {zoneList.length > 0 && (
