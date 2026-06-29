@@ -13,12 +13,18 @@ export function AppProvider({ children }) {
   // Jumelage B: Betshop Marchés → Multi-Périodes
   const [betshopForMulti, setBetshopForMulti] = useState(null);
 
+  // Jumelage C: Retail → autres pages
+  const [retailFilter, setRetailFilter] = useState(null); // { zone, super, prop, city, month }
+  const [navigateTo,   setNavigateTo]   = useState(null); // page à ouvrir (set par les pages)
+
   return (
     <AppContext.Provider value={{
       objectifsFiles, setObjectifsFiles,
       sharedRecap, setSharedRecap,
       sharedRecapName, setSharedRecapName,
       betshopForMulti, setBetshopForMulti,
+      retailFilter, setRetailFilter,
+      navigateTo, setNavigateTo,
     }}>
       {children}
     </AppContext.Provider>

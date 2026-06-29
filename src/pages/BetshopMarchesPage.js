@@ -507,7 +507,10 @@ export default function BetshopMarchesPage({ onNavigate }) {
   const [selectedMarket,setSelectedMarket]= useState('');
   const [marketResult,  setMarketResult]  = useState(null);
 
-  const { setBetshopForMulti } = useAppContext();
+  const { setBetshopForMulti, retailFilter } = useAppContext();
+  const retailInfo = retailFilter
+    ? [retailFilter.zone, retailFilter.super, retailFilter.prop, retailFilter.city].filter(Boolean).join(' · ')
+    : null;
   const evalRef   = useRef();
   const reportRef = useRef();
   const log = (msg) => setLogs(p => [...p, msg]);
@@ -645,6 +648,15 @@ export default function BetshopMarchesPage({ onNavigate }) {
 
   return (
     <div>
+      {retailInfo && (
+        <div style={{ fontSize:11, background:'rgba(96,165,250,.1)', border:'1px solid rgba(96,165,250,.3)',
+          borderRadius:8, padding:'6px 12px', marginBottom:12, color:'#60A5FA',
+          display:'flex', alignItems:'center', gap:8 }}>
+          <span>📊 Contexte Retail :</span>
+          <span style={{ fontWeight:600, color:'var(--text)' }}>{retailInfo}</span>
+          <span style={{ color:'var(--muted)', fontSize:10 }}>· {retailFilter.month}</span>
+        </div>
+      )}
       {/* Uploads */}
       <p className="section-label">Fichiers source</p>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1.25rem'}}>

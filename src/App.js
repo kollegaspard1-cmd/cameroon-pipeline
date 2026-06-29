@@ -1,15 +1,18 @@
 // src/App.js
 import React, { useState } from 'react';
-import { AppProvider }          from './AppContext';
+import { AppProvider, useAppContext } from './AppContext';
 import UploadPage               from './pages/UploadPage';
 import ResultPage               from './pages/ResultPage';
 import HistoryPage              from './pages/HistoryPage';
 import ObjectifsPage            from './pages/ObjectifsPage';
+import CampresjPage             from './pages/CampresjPage';
 import RapportsPage             from './pages/RapportsPage';
 import CMReportPage             from './pages/CMReportPage';
 import MGMRetentionPage         from './pages/MGMRetentionPage';
 import BetshopMarchesPage       from './pages/BetshopMarchesPage';
 import BetshopMultiPeriodesPage from './pages/BetshopMultiPeriodesPage';
+import RetailReportPage         from './pages/RetailReportPage';
+import WatchlistPage            from './pages/WatchlistPage';
 import './App.css';
 
 const NAV = [
@@ -30,8 +33,7 @@ const NAV = [
   {
     section: 'CAMPRESJ',
     items: [
-      { id: 'objectifs',   label: 'Objectifs',       icon: '🎯' },
-      { id: 'rapports',    label: 'Réalisation',     icon: '📈' },
+      { id: 'campresj',   label: 'Objectifs & Réalisation', icon: '🎯' },
     ]
   },
   {
@@ -39,6 +41,13 @@ const NAV = [
     items: [
       { id: 'betshop-marches',    label: 'Par Marché',      icon: '🗺️' },
       { id: 'betshop-periodes',   label: 'Multi-Périodes',  icon: '📅' },
+    ]
+  },
+  {
+    section: 'Retail',
+    items: [
+      { id: 'retail-report',  label: 'Cashier & Deposits', icon: '📋' },
+      { id: 'watchlist',      label: 'Watchlist',           icon: '⚠️' },
     ]
   },
   {
@@ -57,15 +66,26 @@ const TITLES = {
   result:            { title: 'Pipeline Results',         sub: 'Download output files' },
   history:           { title: 'Run History',              sub: 'Firebase-stored past runs' },
   cmreport:          { title: 'Daily Sport Report',       sub: 'Remplissage du template depuis les CSV' },
+  campresj:          { title: 'CAMPRESJ',                   sub: 'Objectifs & Réalisation mensuelle' },
   objectifs:         { title: 'Objectifs CAMPRESJ',       sub: 'Générer les objectifs mensuels' },
   rapports:          { title: 'Rapports Réalisation',     sub: 'Réalisé vs Objectif par super' },
   'betshop-marches': { title: 'Betshop — Par Marché',    sub: 'Fichiers par marché + CAMPRESJ + Global' },
   'betshop-periodes':{ title: 'Betshop — Multi-Périodes', sub: 'Analyse Bimestrielle / Trimestrielle / Semestrielle / Annuelle' },
+  'retail-report':   { title: 'Retail Report',             sub: 'Cashier & Betshop · Deposits & Withdraws by Market' },
+  'watchlist':       { title: 'Watchlist',                  sub: 'Bet Performance MTD vs LM vs LY — Shops en retard' },
   mgm:               { title: 'MGM · Upload & Bonus',    sub: 'Upload data & bonus validator' },
   'mgm-sport':       { title: 'MGM · Sport',              sub: 'Players with 0 tickets this month' },
   'mgm-casino':      { title: 'MGM · Casino',             sub: 'Players with 0 casino payin this month' },
   'mgm-deposit':     { title: 'MGM · Deposit',            sub: 'Players with 0 deposit this month' },
 };
+
+function AppInner({ page, setPage, pipelineResult, setPipelineResult, mgmResults, setMgmResults }) {
+  const { navigateTo, setNavigateTo } = useAppContext();
+  React.useEffect(() => {
+    if (navigateTo) { setPage(navigateTo); setNavigateTo(null); }
+  }, [navigateTo, setNavigateTo, setPage]);
+  return null;
+}
 
 export default function App() {
   const [page, setPage]                     = useState('upload');
@@ -84,6 +104,8 @@ export default function App() {
 
   return (
     <AppProvider>
+      <AppInner page={page} setPage={setPage} pipelineResult={pipelineResult}
+        setPipelineResult={setPipelineResult} mgmResults={mgmResults} setMgmResults={setMgmResults}/>
       <div className="app">
         {/* Mobile overlay */}
         <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
@@ -132,8 +154,11 @@ export default function App() {
             {page === 'result'           && <ResultPage        result={pipelineResult} />}
             {page === 'history'          && <HistoryPage       />}
             {page === 'cmreport'         && <CMReportPage      />}
+            {page === 'campresj'        && <CampresjPage />}
             {page === 'objectifs'        && <ObjectifsPage     onNavigate={setPage} />}
             {page === 'rapports'         && <RapportsPage      onNavigate={setPage} />}
+            {page === 'retail-report'    && <RetailReportPage />}
+            {page === 'watchlist'        && <WatchlistPage />}
             {page === 'betshop-marches'  && <BetshopMarchesPage onNavigate={setPage} />}
             {page === 'betshop-periodes' && <BetshopMultiPeriodesPage onNavigate={setPage} />}
             {(page === 'mgm' || page.startsWith('mgm-')) && (

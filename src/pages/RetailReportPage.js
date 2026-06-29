@@ -8,6 +8,7 @@ import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { loadRecapSaved, loadListe } from '../lib/savedFiles';
+import { useAppContext } from '../AppContext';
 
 const PAGE = 50;
 
@@ -619,6 +620,15 @@ export default function RetailReportPage() {
       return sort.dir === 'desc' ? vb - va : va - vb;
     });
   }, [perfRows, search, sort, filterZone, filterSuper, filterProp, filterCity]);
+
+  // Publier les filtres actifs dans AppContext
+  React.useEffect(() => {
+    setRetailFilter(
+      (filterZone || filterSuper || filterProp || filterCity)
+        ? { zone: filterZone, super: filterSuper, prop: filterProp, city: filterCity, month }
+        : null
+    );
+  }, [filterZone, filterSuper, filterProp, filterCity, month, setRetailFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE));
   const pageRows   = filtered.slice((page-1)*PAGE, page*PAGE);
