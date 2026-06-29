@@ -358,6 +358,7 @@ export default function RetailReportPage() {
   const [loadedFiles, setLoadedFiles] = useState([]); // noms des fichiers chargés
   const [store,       setStore]       = useState(null); // aggregated data
   const [loading,     setLoading]     = useState(false);
+  const { setRetailFilter, setNavigateTo } = useAppContext();
   const [country, setCountry] = useState('');
   const [month,   setMonth]   = useState('');
   const [selectedMkt, setSelectedMkt] = useState(null);
