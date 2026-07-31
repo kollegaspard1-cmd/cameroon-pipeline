@@ -12,6 +12,7 @@ import MGMRetentionPage         from './pages/MGMRetentionPage';
 import BetshopMarchesPage       from './pages/BetshopMarchesPage';
 import BetshopMultiPeriodesPage from './pages/BetshopMultiPeriodesPage';
 import RetailReportPage         from './pages/RetailReportPage';
+import BonusAutoPage            from './pages/BonusAutoPage';
 import BonusSenderPage          from './pages/BonusSenderPage';
 import WatchlistPage            from './pages/WatchlistPage';
 import './App.css';
@@ -52,6 +53,12 @@ const NAV = [
     ]
   },
   {
+    section: 'Bonus Auto',
+    items: [
+      { id: 'bonus-auto', label: 'Envoi Bonus', icon: '🤖' },
+    ]
+  },
+  {
     section: 'Automatisation',
     items: [
       { id: 'bonus-sender', label: 'Bonus Sender', icon: '🤖' },
@@ -78,6 +85,7 @@ const TITLES = {
   rapports:          { title: 'Rapports Réalisation',     sub: 'Réalisé vs Objectif par super' },
   'betshop-marches': { title: 'Betshop — Par Marché',    sub: 'Fichiers par marché + CAMPRESJ + Global' },
   'betshop-periodes':{ title: 'Betshop — Multi-Périodes', sub: 'Analyse Bimestrielle / Trimestrielle / Semestrielle / Annuelle' },
+  'bonus-auto':        { title: 'Bonus Auto',              sub: 'Envoi automatique Casino · Cashback · Sport' },
   'retail-report':   { title: 'Retail Report',             sub: 'Cashier & Betshop · Deposits & Withdraws by Market' },
   'watchlist':       { title: 'Watchlist',                  sub: 'Bet Performance MTD vs LM vs LY — Shops en retard' },
   'bonus-sender':    { title: 'Bonus Sender', sub: 'Automatisation envoi bonus Meridianbet BO' },
@@ -158,6 +166,7 @@ export default function App() {
             {page === 'retail-report'    && <RetailReportPage />}
             {page === 'bonus-sender'     && <BonusSenderPage />}
             {page === 'watchlist'        && <WatchlistPage />}
+            {page === 'bonus-auto'       && <BonusAutoPage />}
             {page === 'betshop-marches'  && <BetshopMarchesPage onNavigate={setPage} />}
             {page === 'betshop-periodes' && <BetshopMultiPeriodesPage onNavigate={setPage} />}
             {(page === 'mgm' || page.startsWith('mgm-')) && (
