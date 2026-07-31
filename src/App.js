@@ -1,6 +1,6 @@
 // src/App.js
 import React, { useState } from 'react';
-import { AppProvider, useAppContext } from './AppContext';
+import { AppProvider }          from './AppContext';
 import UploadPage               from './pages/UploadPage';
 import ResultPage               from './pages/ResultPage';
 import HistoryPage              from './pages/HistoryPage';
@@ -12,6 +12,7 @@ import MGMRetentionPage         from './pages/MGMRetentionPage';
 import BetshopMarchesPage       from './pages/BetshopMarchesPage';
 import BetshopMultiPeriodesPage from './pages/BetshopMultiPeriodesPage';
 import RetailReportPage         from './pages/RetailReportPage';
+import BonusSenderPage          from './pages/BonusSenderPage';
 import WatchlistPage            from './pages/WatchlistPage';
 import './App.css';
 
@@ -51,6 +52,12 @@ const NAV = [
     ]
   },
   {
+    section: 'Automatisation',
+    items: [
+      { id: 'bonus-sender', label: 'Bonus Sender', icon: '🤖' },
+    ]
+  },
+  {
     section: 'MGM Retention',
     items: [
       { id: 'mgm',         label: 'Upload & Bonus',  icon: '📁' },
@@ -73,19 +80,12 @@ const TITLES = {
   'betshop-periodes':{ title: 'Betshop — Multi-Périodes', sub: 'Analyse Bimestrielle / Trimestrielle / Semestrielle / Annuelle' },
   'retail-report':   { title: 'Retail Report',             sub: 'Cashier & Betshop · Deposits & Withdraws by Market' },
   'watchlist':       { title: 'Watchlist',                  sub: 'Bet Performance MTD vs LM vs LY — Shops en retard' },
+  'bonus-sender':    { title: 'Bonus Sender', sub: 'Automatisation envoi bonus Meridianbet BO' },
   mgm:               { title: 'MGM · Upload & Bonus',    sub: 'Upload data & bonus validator' },
   'mgm-sport':       { title: 'MGM · Sport',              sub: 'Players with 0 tickets this month' },
   'mgm-casino':      { title: 'MGM · Casino',             sub: 'Players with 0 casino payin this month' },
   'mgm-deposit':     { title: 'MGM · Deposit',            sub: 'Players with 0 deposit this month' },
 };
-
-function AppInner({ page, setPage, pipelineResult, setPipelineResult, mgmResults, setMgmResults }) {
-  const { navigateTo, setNavigateTo } = useAppContext();
-  React.useEffect(() => {
-    if (navigateTo) { setPage(navigateTo); setNavigateTo(null); }
-  }, [navigateTo, setNavigateTo, setPage]);
-  return null;
-}
 
 export default function App() {
   const [page, setPage]                     = useState('upload');
@@ -104,8 +104,6 @@ export default function App() {
 
   return (
     <AppProvider>
-      <AppInner page={page} setPage={setPage} pipelineResult={pipelineResult}
-        setPipelineResult={setPipelineResult} mgmResults={mgmResults} setMgmResults={setMgmResults}/>
       <div className="app">
         {/* Mobile overlay */}
         <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
@@ -158,6 +156,7 @@ export default function App() {
             {page === 'objectifs'        && <ObjectifsPage     onNavigate={setPage} />}
             {page === 'rapports'         && <RapportsPage      onNavigate={setPage} />}
             {page === 'retail-report'    && <RetailReportPage />}
+            {page === 'bonus-sender'     && <BonusSenderPage />}
             {page === 'watchlist'        && <WatchlistPage />}
             {page === 'betshop-marches'  && <BetshopMarchesPage onNavigate={setPage} />}
             {page === 'betshop-periodes' && <BetshopMultiPeriodesPage onNavigate={setPage} />}
