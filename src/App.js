@@ -22,6 +22,7 @@ const NAV = [
     section: 'Pipeline CM',
     items: [
       { id: 'upload',      label: 'Daily Retention', icon: '⚡' },
+      { id: 'bonus-auto',  label: 'Envoi Bonus',     icon: '🤖' },
       { id: 'result',      label: 'Results',         icon: '📊', requiresResult: true },
       { id: 'history',     label: 'History',          icon: '🕐' },
     ]
@@ -52,12 +53,7 @@ const NAV = [
       { id: 'watchlist',      label: 'Watchlist',           icon: '⚠️' },
     ]
   },
-  {
-    section: 'Bonus Auto',
-    items: [
-      { id: 'bonus-auto', label: 'Envoi Bonus', icon: '🤖' },
-    ]
-  },
+
   {
     section: 'Automatisation',
     items: [

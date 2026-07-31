@@ -284,6 +284,12 @@ export default function BonusAutoPage() {
           <span style={{ fontSize:11, color:'var(--muted)' }}>
             {serverOk === null ? 'Vérification…' : serverOk ? 'Connecté · :5001' : 'Hors ligne'}
           </span>
+          {serverOk === false && (
+            <button onClick={() => window.location.reload()} style={{
+              fontSize:10, padding:'2px 7px', borderRadius:4, border:'none',
+              cursor:'pointer', background:'var(--bg)', color:'var(--muted)',
+            }}>↻</button>
+          )}
         </div>
       </div>
 
@@ -291,18 +297,48 @@ export default function BonusAutoPage() {
       {serverOk === false && (
         <div style={{
           background:'rgba(248,113,113,.08)', border:'1px solid rgba(248,113,113,.3)',
-          borderRadius:10, padding:'12px 16px', marginBottom:20, fontSize:12,
+          borderRadius:10, padding:'14px 16px', marginBottom:20, fontSize:12,
         }}>
-          <div style={{ fontWeight:700, color:'#F87171', marginBottom:6 }}>
+          <div style={{ fontWeight:700, color:'#F87171', marginBottom:8 }}>
             ⚠️ Serveur local non détecté
           </div>
-          <div style={{ color:'var(--muted)', lineHeight:1.6 }}>
-            Lance le serveur dans un terminal :<br/>
-            <code style={{ background:'var(--bg3)', padding:'2px 6px', borderRadius:4, fontFamily:'monospace' }}>
-              python3 bonus_server.py
+          <div style={{ color:'var(--muted)', lineHeight:1.8, marginBottom:12 }}>
+            Le serveur local doit tourner pour que l'envoi fonctionne.<br/>
+            <strong style={{ color:'var(--text)' }}>Option 1</strong> — Double-clique sur{' '}
+            <code style={{ background:'var(--bg3)', padding:'2px 6px', borderRadius:4 }}>
+              Lancer_Bonus_Server.command
+            </code>{' '}
+            (à placer sur ton Bureau)<br/>
+            <strong style={{ color:'var(--text)' }}>Option 2</strong> — Terminal :{' '}
+            <code style={{ background:'var(--bg3)', padding:'2px 6px', borderRadius:4 }}>
+              python3 ~/Downloads/bonus_server.py
             </code>
-            <br/>
-            Puis recharge cette page.
+          </div>
+          <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+            <button
+              onClick={() => {
+                // Copier la commande dans le presse-papiers
+                navigator.clipboard.writeText('python3 ~/Downloads/bonus_server.py');
+                alert('Commande copiée !\nColle-la dans un Terminal puis appuie sur Entrée.');
+              }}
+              style={{
+                padding:'7px 14px', borderRadius:7, border:'none', cursor:'pointer',
+                background:'#F87171', color:'#fff', fontWeight:700, fontSize:11,
+              }}>
+              📋 Copier la commande
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding:'7px 14px', borderRadius:7, border:'1px solid var(--border)',
+                cursor:'pointer', background:'var(--bg3)', color:'var(--text)',
+                fontWeight:600, fontSize:11,
+              }}>
+              🔄 Vérifier à nouveau
+            </button>
+            <span style={{ fontSize:10, color:'var(--muted)' }}>
+              Le serveur tourne sur localhost:5001
+            </span>
           </div>
         </div>
       )}
