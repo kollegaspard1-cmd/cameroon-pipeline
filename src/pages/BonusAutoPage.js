@@ -5,10 +5,8 @@ import React, { useState, useRef, useEffect } from 'react';
 const SERVER = "http://localhost:5001";
 
 const BONUS_TYPES = [
-  { id: 'casino',    label: '🎰 Casino',    desc: 'casino_bonus_cm.csv',           color: '#818CF8' },
-  { id: 'cashback',  label: '💸 Cashback',  desc: 'Daily_Cashback_Template.csv',   color: '#34D399' },
-  { id: 'sport100',  label: '⚽ Sport 100', desc: 'Sport_Daily_100.csv',           color: '#F97316' },
-  { id: 'sport200',  label: '⚽ Sport 200', desc: 'Sport_Daily_200.csv',           color: '#FBBF24' },
+  { id: 'casino',   label: '🎰 Casino',   desc: 'casino_bonus_cm.csv',         color: '#818CF8' },
+  { id: 'cashback', label: '💸 Cashback', desc: 'Daily_Cashback_Template.csv', color: '#34D399' },
 ];
 
 function LogLine({ entry }) {
@@ -19,6 +17,108 @@ function LogLine({ entry }) {
       <span style={{ color:'var(--muted)', flexShrink:0 }}>{entry.ts}</span>
       <span style={{ color: colors[entry.level] || colors.info, flexShrink:0 }}>{icons[entry.level]}</span>
       <span style={{ color: colors[entry.level] || colors.info }}>{entry.msg}</span>
+    </div>
+  );
+}
+
+
+function SportBonusSection({ serverOk, onFilesLoaded }) {
+  const [files, setFiles] = useState([]); // [{id, name, content, label}]
+  const fileRef = useRef();
+
+  const addFile = (f) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const content = e.target.result;
+      // Détecter le label depuis le nom du fichier (100, 200, etc.)
+      const match = f.name.match(/(\d+)/);
+      const label = match ? match[1] : String(Date.now());
+      const newFile = { id: Date.now(), name: f.name, content, label };
+      setFiles(prev => {
+        const updated = [...prev, newFile];
+        onFilesLoaded(updated);
+        return updated;
+      });
+    };
+    reader.readAsText(f);
+  };
+
+  const removeFile = (id) => {
+    setFiles(prev => {
+      const updated = prev.filter(f => f.id !== id);
+      onFilesLoaded(updated);
+      return updated;
+    });
+  };
+
+  return (
+    <div style={{
+      background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:12,
+      padding:18, borderTop:'3px solid #F97316', marginBottom:14,
+    }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+        <div>
+          <div style={{ fontSize:14, fontWeight:700, color:'#F97316' }}>⚽ Sport Bonus</div>
+          <div style={{ fontSize:11, color:'var(--muted)' }}>
+            Un fichier par type (Sport_Daily_100.csv, Sport_Daily_200.csv, etc.)
+          </div>
+        </div>
+        <button
+          onClick={() => fileRef.current.click()}
+          style={{
+            fontSize:11, padding:'6px 12px', borderRadius:7, border:'1px dashed #F97316',
+            background:'rgba(249,115,22,.08)', color:'#F97316', cursor:'pointer', fontWeight:600,
+          }}>
+          + Ajouter un fichier
+        </button>
+        <input ref={fileRef} type="file" accept=".csv" hidden multiple
+          onChange={e => { Array.from(e.target.files).forEach(addFile); e.target.value=''; }}/>
+      </div>
+
+      {files.length === 0 ? (
+        <div
+          onClick={() => fileRef.current.click()}
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => { e.preventDefault(); Array.from(e.dataTransfer.files).forEach(addFile); }}
+          style={{
+            border:'2px dashed var(--border)', borderRadius:8, padding:'20px 16px',
+            textAlign:'center', cursor:'pointer', color:'var(--muted)', fontSize:12,
+          }}>
+          <div style={{ fontSize:22, marginBottom:6 }}>📂</div>
+          <div>Glisse les fichiers Sport ici ou <span style={{ color:'#F97316', fontWeight:600 }}>clique</span></div>
+          <div style={{ fontSize:10, marginTop:4 }}>Sport_Daily_100.csv · Sport_Daily_200.csv · etc.</div>
+        </div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {files.map(f => (
+            <div key={f.id} style={{
+              display:'flex', alignItems:'center', gap:10,
+              background:'var(--bg3)', borderRadius:8, padding:'8px 12px',
+            }}>
+              <span style={{ fontSize:16 }}>⚽</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:'var(--text)' }}>{f.name}</div>
+                <div style={{ fontSize:10, color:'var(--muted)' }}>
+                  Label détecté : <span style={{ color:'#F97316', fontWeight:700 }}>{f.label} XAF</span>
+                  {' · '}Template : CM Daily sport bonus {f.label} XAF
+                </div>
+              </div>
+              <button onClick={() => removeFile(f.id)} style={{
+                background:'none', border:'none', cursor:'pointer',
+                color:'var(--muted)', fontSize:16, padding:'0 4px',
+              }}>✕</button>
+            </div>
+          ))}
+          <button
+            onClick={() => fileRef.current.click()}
+            style={{
+              fontSize:11, padding:'5px 10px', borderRadius:6, border:'1px dashed var(--border)',
+              background:'transparent', color:'var(--muted)', cursor:'pointer', alignSelf:'flex-start',
+            }}>
+            + Ajouter un autre fichier
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -216,6 +316,7 @@ function BonusCard({ type, onFileLoaded }) {
 export default function BonusAutoPage() {
   const [serverOk, setServerOk] = useState(null);
   const [loadedFiles, setLoadedFiles] = useState({});
+  const [sportFiles,  setSportFiles]  = useState([]); // [{name, content, label}]
   const [batchStatus, setBatchStatus] = useState('idle');
   const [batchLogs, setBatchLogs] = useState([]);
 
@@ -237,9 +338,7 @@ export default function BonusAutoPage() {
     const body = {};
     if (loadedFiles.casino)    body.casino_csv    = loadedFiles.casino;
     if (loadedFiles.cashback)  body.cashback_csv  = loadedFiles.cashback;
-    body.sport_files = [];
-    if (loadedFiles.sport100)  body.sport_files.push({ csv_content: loadedFiles.sport100, amount_label: '100' });
-    if (loadedFiles.sport200)  body.sport_files.push({ csv_content: loadedFiles.sport200, amount_label: '200' });
+    body.sport_files = sportFiles.map(f => ({ csv_content: f.content, amount_label: f.label }));
 
     try {
       const r = await fetch(`${SERVER}/send/all`, {
@@ -255,7 +354,7 @@ export default function BonusAutoPage() {
     }
   };
 
-  const filesReady = Object.keys(loadedFiles).length;
+  const filesReady = Object.keys(loadedFiles).length + sportFiles.length;
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: '20px 16px' }}>
@@ -343,15 +442,18 @@ export default function BonusAutoPage() {
         </div>
       )}
 
-      {/* Grille des 4 types de bonus */}
+      {/* Grille Casino + Cashback */}
       <div style={{
         display:'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-        gap:14, marginBottom:20,
+        gap:14, marginBottom:14,
       }}>
         {BONUS_TYPES.map(type => (
           <BonusCard key={type.id} type={type} onFileLoaded={handleFileLoaded}/>
         ))}
       </div>
+
+      {/* Section Sport Bonus — multi-fichiers */}
+      <SportBonusSection serverOk={serverOk} onFilesLoaded={(files) => setSportFiles(files)}/>
 
       {/* Bouton Tout envoyer */}
       {filesReady > 1 && (
