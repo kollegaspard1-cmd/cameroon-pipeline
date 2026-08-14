@@ -493,15 +493,35 @@ export default function BonusAutoPage() {
           <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
             <button
               onClick={() => {
-                // Copier la commande dans le presse-papiers
-                navigator.clipboard.writeText('python3 ~/Downloads/bonus_server.py');
-                alert('Commande copiée !\nColle-la dans un Terminal puis appuie sur Entrée.');
+                // Essayer d'ouvrir Terminal directement via lien
+                const cmd = 'python3 /Users/abelgaspardkollendame/Desktop/DAILY/cameroon-app/bonus_server.py';
+                // Méthode 1 : lien terminal:// (macOS)
+                const link = document.createElement('a');
+                link.href = `terminal://open?command=${encodeURIComponent(cmd)}`;
+                link.click();
+                // Méthode 2 : copier dans le presse-papiers en fallback
+                setTimeout(() => {
+                  navigator.clipboard.writeText(cmd).then(() => {});
+                }, 500);
               }}
               style={{
                 padding:'7px 14px', borderRadius:7, border:'none', cursor:'pointer',
                 background:'#F87171', color:'#fff', fontWeight:700, fontSize:11,
               }}>
-              📋 Copier la commande
+              🖥️ Ouvrir Terminal
+            </button>
+            <button
+              onClick={() => {
+                const cmd = 'python3 /Users/abelgaspardkollendame/Desktop/DAILY/cameroon-app/bonus_server.py';
+                navigator.clipboard.writeText(cmd);
+                alert('✅ Commande copiée !\n\nColle dans Terminal (Cmd+V) puis Entrée.');
+              }}
+              style={{
+                padding:'7px 14px', borderRadius:7, border:'none', cursor:'pointer',
+                background:'var(--bg)', color:'var(--text)', fontWeight:700, fontSize:11,
+                border:'1px solid var(--border)',
+              }}>
+              📋 Copier
             </button>
             <button
               onClick={() => window.location.reload()}
