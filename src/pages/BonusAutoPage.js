@@ -207,7 +207,9 @@ function BonusCard({ type, onFileLoaded }) {
   const [taskId, setTaskId] = useState(null);
   const [logs, setLogs]     = useState([]);
   const [status, setStatus] = useState('idle'); // idle | running | done | error
-  const [serverOk, setServerOk] = useState(null);
+  const [serverOk,  setServerOk]  = useState(null);
+  const [chromeCdp, setChromeCdp] = useState(null); // true=ok, false=non, null=check en cours
+  const [chromeLaunching, setChromeLaunching] = useState(false);
   const pollRef = useRef(null);
 
   // Vérifier le serveur au montage
@@ -391,7 +393,9 @@ function BonusCard({ type, onFileLoaded }) {
 }
 
 export default function BonusAutoPage() {
-  const [serverOk, setServerOk] = useState(null);
+  const [serverOk,  setServerOk]  = useState(null);
+  const [chromeCdp, setChromeCdp] = useState(null); // true=ok, false=non, null=check en cours
+  const [chromeLaunching, setChromeLaunching] = useState(false);
   const [loadedFiles, setLoadedFiles] = useState({});
   const [sportFiles,  setSportFiles]  = useState([]); // [{name, content, label}]
   const [batchStatus, setBatchStatus] = useState('idle');
@@ -399,11 +403,30 @@ export default function BonusAutoPage() {
 
   useEffect(() => {
     const check = () => fetch(`${SERVER}/status`)
-      .then(r => r.json()).then(() => setServerOk(true)).catch(() => setServerOk(false));
+      .then(r => r.json())
+      .then(d => { setServerOk(true); setChromeCdp(d.chrome_cdp === true); })
+      .catch(() => { setServerOk(false); setChromeCdp(false); });
     check();
     const interval = setInterval(check, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  const openChromeCdp = async () => {
+    setChromeLaunching(true);
+    try {
+      const r = await fetch(`${SERVER}/open-chrome`, { method: 'POST' });
+      const d = await r.json();
+      if (d.ok) {
+        setChromeCdp(true);
+        alert('✅ ' + d.msg + '\n\nConnecte-toi au backoffice dans Chrome si pas déjà fait.');
+      } else {
+        alert('❌ ' + d.msg);
+      }
+    } catch(e) {
+      alert('❌ Erreur : ' + e.message);
+    }
+    setChromeLaunching(false);
+  };
 
   const handleFileLoaded = (typeId, content) => {
     setLoadedFiles(prev => ({ ...prev, [typeId]: content }));
@@ -446,25 +469,41 @@ export default function BonusAutoPage() {
             Charge les fichiers générés par le Pipeline, puis lance l'envoi en un clic.
           </div>
         </div>
-        <div style={{
-          display:'flex', alignItems:'center', gap:8, padding:'8px 14px',
-          borderRadius:8, border:'1px solid var(--border)', background:'var(--bg2)',
-        }}>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          {/* Statut serveur */}
           <div style={{
-            width:8, height:8, borderRadius:'50%',
-            background: serverOk === null ? '#FBBF24' : serverOk ? '#34D399' : '#F87171',
-          }}/>
-          <span style={{ fontSize:12, fontWeight:600, color:'var(--text)' }}>
-            Serveur local
-          </span>
-          <span style={{ fontSize:11, color:'var(--muted)' }}>
-            {serverOk === null ? 'Vérification…' : serverOk ? 'Connecté · :5001' : 'Hors ligne'}
-          </span>
-          {serverOk === false && (
-            <button onClick={() => window.location.reload()} style={{
-              fontSize:10, padding:'2px 7px', borderRadius:4, border:'none',
-              cursor:'pointer', background:'var(--bg)', color:'var(--muted)',
-            }}>↻</button>
+            display:'flex', alignItems:'center', gap:6, padding:'6px 12px',
+            borderRadius:8, border:'1px solid var(--border)', background:'var(--bg2)',
+          }}>
+            <div style={{ width:7, height:7, borderRadius:'50%',
+              background: serverOk === null ? '#FBBF24' : serverOk ? '#34D399' : '#F87171' }}/>
+            <span style={{ fontSize:11, fontWeight:600, color:'var(--text)' }}>Serveur</span>
+            <span style={{ fontSize:11, color:'var(--muted)' }}>
+              {serverOk ? ':5001' : 'hors ligne'}
+            </span>
+          </div>
+          {/* Statut Chrome CDP + bouton */}
+          {serverOk && (
+            <div style={{
+              display:'flex', alignItems:'center', gap:6, padding:'6px 12px',
+              borderRadius:8, border:'1px solid var(--border)', background:'var(--bg2)',
+            }}>
+              <div style={{ width:7, height:7, borderRadius:'50%',
+                background: chromeCdp ? '#34D399' : '#F87171' }}/>
+              <span style={{ fontSize:11, fontWeight:600, color:'var(--text)' }}>Chrome</span>
+              <span style={{ fontSize:11, color:'var(--muted)' }}>
+                {chromeCdp ? 'CDP actif' : 'non connecté'}
+              </span>
+              {!chromeCdp && (
+                <button onClick={openChromeCdp} disabled={chromeLaunching} style={{
+                  fontSize:10, padding:'3px 8px', borderRadius:5, border:'none',
+                  cursor: chromeLaunching ? 'wait' : 'pointer',
+                  background:'#60A5FA', color:'#fff', fontWeight:700,
+                }}>
+                  {chromeLaunching ? '⏳ Lancement…' : '🚀 Lancer Chrome'}
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
