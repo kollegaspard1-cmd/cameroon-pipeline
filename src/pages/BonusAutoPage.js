@@ -23,8 +23,48 @@ function LogLine({ entry }) {
 
 
 function SportBonusSection({ serverOk, onFilesLoaded }) {
-  const [files, setFiles] = useState([]); // [{id, name, content, label}]
+  const [files,  setFiles]  = useState([]); // [{id, name, content, label}]
+  const [status, setStatus] = useState('idle'); // idle | running | done | error
+  const [logs,   setLogs]   = useState([]);
   const fileRef = useRef();
+  const pollRef = useRef(null);
+
+  const startPolling = (tid) => {
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await fetch(`${SERVER}/task/${tid}`);
+        const data = await r.json();
+        setLogs([...data.logs]);
+        if (data.done) {
+          clearInterval(pollRef.current);
+          setStatus(data.status === 'done' ? 'done' : 'error');
+        }
+      } catch {}
+    }, 800);
+  };
+
+  const sendSport = async (f) => {
+    setStatus('running');
+    setLogs([]);
+    try {
+      const r = await fetch(`${SERVER}/send/sport`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csv_content: f.content, amount_label: f.label }),
+      });
+      const data = await r.json();
+      startPolling(data.task_id);
+    } catch(e) {
+      setStatus('error');
+      setLogs([{ ts:'--:--:--', msg: `Erreur: ${e.message}`, level:'error' }]);
+    }
+  };
+
+  const resetSport = () => {
+    clearInterval(pollRef.current);
+    setStatus('idle');
+    setLogs([]);
+  };
 
   const addFile = (f) => {
     const reader = new FileReader();
@@ -92,23 +132,59 @@ function SportBonusSection({ serverOk, onFilesLoaded }) {
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {files.map(f => (
             <div key={f.id} style={{
-              display:'flex', alignItems:'center', gap:10,
-              background:'var(--bg3)', borderRadius:8, padding:'8px 12px',
+              background:'var(--bg3)', borderRadius:8, padding:'10px 12px',
             }}>
-              <span style={{ fontSize:16 }}>⚽</span>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:12, fontWeight:600, color:'var(--text)' }}>{f.name}</div>
-                <div style={{ fontSize:10, color:'var(--muted)' }}>
-                  Label détecté : <span style={{ color:'#F97316', fontWeight:700 }}>{f.label} XAF</span>
-                  {' · '}Template : CM Daily sport bonus {f.label} XAF
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:16 }}>⚽</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:'var(--text)' }}>{f.name}</div>
+                  <div style={{ fontSize:10, color:'var(--muted)' }}>
+                    Label détecté : <span style={{ color:'#F97316', fontWeight:700 }}>{f.label} XAF</span>
+                    {' · '}Template : CM Daily sport bonus {f.label} XAF
+                  </div>
                 </div>
+                {status === 'idle' && (
+                  <button onClick={() => sendSport(f)} disabled={!serverOk} style={{
+                    fontSize:11, padding:'5px 12px', borderRadius:6, border:'none',
+                    cursor: serverOk ? 'pointer' : 'not-allowed',
+                    background: serverOk ? '#F97316' : 'var(--bg)',
+                    color: serverOk ? '#fff' : 'var(--muted)', fontWeight:700,
+                  }}>🚀 Envoyer</button>
+                )}
+                {status === 'running' && (
+                  <span style={{ fontSize:11, color:'#FBBF24', fontWeight:600 }}>⏳ En cours…</span>
+                )}
+                {status === 'done' && (
+                  <span style={{ fontSize:11, color:'#34D399', fontWeight:600 }}>✅ Envoyé</span>
+                )}
+                {status === 'error' && (
+                  <span style={{ fontSize:11, color:'#F87171', fontWeight:600 }}>❌ Erreur</span>
+                )}
+                {status === 'idle' && (
+                  <button onClick={() => removeFile(f.id)} style={{
+                    background:'none', border:'none', cursor:'pointer',
+                    color:'var(--muted)', fontSize:16, padding:'0 4px',
+                  }}>✕</button>
+                )}
               </div>
-              <button onClick={() => removeFile(f.id)} style={{
-                background:'none', border:'none', cursor:'pointer',
-                color:'var(--muted)', fontSize:16, padding:'0 4px',
-              }}>✕</button>
+              {/* Logs pour ce fichier */}
+              {logs.length > 0 && (
+                <div style={{
+                  marginTop:8, background:'var(--bg2)', borderRadius:6,
+                  padding:'6px 10px', maxHeight:120, overflowY:'auto',
+                }}>
+                  {logs.map((l, i) => <LogLine key={i} entry={l}/>)}
+                </div>
+              )}
+              {(status === 'done' || status === 'error') && (
+                <button onClick={resetSport} style={{
+                  marginTop:6, fontSize:10, padding:'3px 8px', borderRadius:4,
+                  border:'none', cursor:'pointer', background:'var(--bg)', color:'var(--muted)',
+                }}>🔄 Réinitialiser</button>
+              )}
             </div>
           ))}
+          {status === 'idle' && (
           <button
             onClick={() => fileRef.current.click()}
             style={{
@@ -117,6 +193,7 @@ function SportBonusSection({ serverOk, onFilesLoaded }) {
             }}>
             + Ajouter un autre fichier
           </button>
+          )}
         </div>
       )}
     </div>
