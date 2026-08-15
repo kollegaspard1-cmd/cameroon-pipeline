@@ -274,7 +274,7 @@ export default function ResultPage({ result }) {
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{ display:'flex', gap:6, marginBottom:16 }}>
+      <div style={{ display:'flex', gap:6, marginBottom:16, flexWrap:'wrap', alignItems:'center' }}>
         {[
           { id:'campaigns', label:`🎯 Campagnes` },
           { id:'sport',     label:`⚽ Bonus Sport (${sportFiles.length})` },
@@ -292,6 +292,17 @@ export default function ResultPage({ result }) {
             {t.label}
           </button>
         ))}
+        {/* Bouton transfert vers Bonus Auto */}
+        {(cbRows.length > 0 || cashRows.length > 0 || sportFiles.length > 0) && (
+          <button onClick={transferToBonus} style={{
+            marginLeft:'auto', fontSize:12, padding:'7px 16px', borderRadius:7,
+            border:'none', cursor:'pointer', fontWeight:700,
+            background:'linear-gradient(135deg,#818CF8,#34D399)',
+            color:'#fff', display:'flex', alignItems:'center', gap:6,
+          }}>
+            🤖 → Envoi Bonus
+          </button>
+        )}
       </div>
 
       {/* ── Campagnes tab ── */}
