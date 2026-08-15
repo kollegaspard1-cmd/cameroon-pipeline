@@ -31,7 +31,7 @@ function SportBonusSection({ serverOk, onFilesLoaded, initialFiles }) {
       setFiles(initialFiles);
       onFilesLoaded(initialFiles);
     }
-  }, [initialFiles]); // eslint-disable-line // [{id, name, content, label}]
+  }, [initialFiles]); // eslint-disable-line
   const [status, setStatus] = useState('idle'); // idle | running | done | error
   const [logs,   setLogs]   = useState([]);
   const fileRef = useRef();
