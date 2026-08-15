@@ -205,8 +205,7 @@ export default function ResultPage({ result }) {
   // Transférer les fichiers vers Bonus Auto via AppContext
   function transferToBonus() {
     const toCSV = (rows, cols) =>
-      [cols.join(','), ...rows.map(r => cols.map(k => r[k] ?? '').join(','))].join('
-');
+      [cols.join(','), ...rows.map(r => cols.map(k => r[k] ?? '').join(','))].join('\n');
 
     const bonusData = {};
 

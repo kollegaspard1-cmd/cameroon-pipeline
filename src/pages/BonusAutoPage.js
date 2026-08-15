@@ -477,9 +477,7 @@ export default function BonusAutoPage() {
           data.sport_files?.length > 0 ? `⚽ Sport (${data.sport_files.length})` : null,
         ].filter(Boolean);
         if (types.length > 0) {
-          setTimeout(() => alert(`✅ Fichiers transférés depuis Results :
-${types.join('
-')}`), 500);
+          setTimeout(() => alert('✅ Fichiers transférés depuis Results :\n' + types.join('\n')), 500);
         }
       } catch(e) { console.warn('Transfer error:', e); }
     }
