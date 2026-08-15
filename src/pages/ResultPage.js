@@ -239,6 +239,8 @@ export default function ResultPage({ result }) {
       }
       // Stocker dans sessionStorage pour que BonusAutoPage le lise
       sessionStorage.setItem('bonusTransfer', JSON.stringify(bonusData));
+      // Dispatcher l'event si BonusAutoPage est déjà monté
+      window.dispatchEvent(new Event('bonusTransfer'));
       setNavigateTo('bonus-auto');
     };
     loadSportFiles();
