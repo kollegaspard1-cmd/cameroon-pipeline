@@ -137,7 +137,7 @@ function SportBonusSection({ serverOk, onFilesLoaded, initialFiles }) {
           <div style={{ fontSize:10, marginTop:4 }}>Sport_Daily_100.csv · Sport_Daily_200.csv · etc.</div>
         </div>
       ) : (
-        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:300, overflowY:'auto', paddingRight:4 }}>
           {files.map(f => (
             <div key={f.id} style={{
               background:'var(--bg3)', borderRadius:8, padding:'10px 12px',
