@@ -176,11 +176,29 @@ function SportBonusSection({ serverOk, onFilesLoaded }) {
                   {logs.map((l, i) => <LogLine key={i} entry={l}/>)}
                 </div>
               )}
-              {(status === 'done' || status === 'error') && (
-                <button onClick={resetSport} style={{
-                  marginTop:6, fontSize:10, padding:'3px 8px', borderRadius:4,
-                  border:'none', cursor:'pointer', background:'var(--bg)', color:'var(--muted)',
-                }}>🔄 Réinitialiser</button>
+              {status === 'done' && (
+                <div style={{ display:'flex', gap:6, marginTop:6 }}>
+                  <button onClick={() => { setStatus('idle'); setLogs([]); }} style={{
+                    fontSize:10, padding:'3px 8px', borderRadius:4, border:'none',
+                    cursor:'pointer', background:'rgba(52,211,153,.15)', color:'#34D399', fontWeight:700,
+                  }}>🔄 Renvoyer</button>
+                  <button onClick={resetSport} style={{
+                    fontSize:10, padding:'3px 8px', borderRadius:4, border:'none',
+                    cursor:'pointer', background:'var(--bg)', color:'var(--muted)',
+                  }}>✕ Retirer</button>
+                </div>
+              )}
+              {status === 'error' && (
+                <div style={{ display:'flex', gap:6, marginTop:6 }}>
+                  <button onClick={() => { setStatus('idle'); setLogs([]); }} style={{
+                    fontSize:10, padding:'3px 8px', borderRadius:4, border:'none',
+                    cursor:'pointer', background:'rgba(248,113,113,.15)', color:'#F87171', fontWeight:700,
+                  }}>🔄 Réessayer</button>
+                  <button onClick={resetSport} style={{
+                    fontSize:10, padding:'3px 8px', borderRadius:4, border:'none',
+                    cursor:'pointer', background:'var(--bg)', color:'var(--muted)',
+                  }}>✕ Retirer</button>
+                </div>
               )}
             </div>
           ))}
@@ -379,13 +397,37 @@ function BonusCard({ type, onFileLoaded }) {
             ⏳ Envoi en cours…
           </div>
         )}
-        {(status === 'done' || status === 'error') && (
-          <button onClick={reset} style={{
-            flex:1, padding:'8px 0', borderRadius:8, border:'none', cursor:'pointer',
-            background:'var(--bg3)', color:'var(--text)', fontWeight:600, fontSize:13,
-          }}>
-            🔄 Nouveau fichier
-          </button>
+        {status === 'done' && (
+          <div style={{ display:'flex', gap:6, flex:1 }}>
+            <button onClick={() => { setStatus('idle'); setLogs([]); setTaskId(null); }} style={{
+              flex:1, padding:'8px 0', borderRadius:8, border:'none', cursor:'pointer',
+              background:'rgba(52,211,153,.15)', color:'#34D399', fontWeight:700, fontSize:13,
+            }}>
+              🔄 Renvoyer
+            </button>
+            <button onClick={reset} style={{
+              padding:'8px 12px', borderRadius:8, border:'none', cursor:'pointer',
+              background:'var(--bg3)', color:'var(--muted)', fontWeight:600, fontSize:12,
+            }}>
+              ✕ Nouveau
+            </button>
+          </div>
+        )}
+        {status === 'error' && (
+          <div style={{ display:'flex', gap:6, flex:1 }}>
+            <button onClick={() => { setStatus('idle'); setLogs([]); setTaskId(null); }} style={{
+              flex:1, padding:'8px 0', borderRadius:8, border:'none', cursor:'pointer',
+              background:'rgba(248,113,113,.15)', color:'#F87171', fontWeight:700, fontSize:13,
+            }}>
+              🔄 Réessayer
+            </button>
+            <button onClick={reset} style={{
+              padding:'8px 12px', borderRadius:8, border:'none', cursor:'pointer',
+              background:'var(--bg3)', color:'var(--muted)', fontWeight:600, fontSize:12,
+            }}>
+              ✕ Nouveau
+            </button>
+          </div>
         )}
       </div>
     </div>
