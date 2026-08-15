@@ -441,6 +441,7 @@ export default function BonusAutoPage() {
   const [loadedFiles, setLoadedFiles] = useState({});
   const [sportFiles,  setSportFiles]  = useState([]); // [{name, content, label}]
   const [batchStatus, setBatchStatus] = useState('idle');
+  const [batchTaskId, setBatchTaskId] = useState(null);
   const [batchLogs, setBatchLogs] = useState([]);
 
   useEffect(() => {
@@ -488,8 +489,19 @@ export default function BonusAutoPage() {
       });
       const data = await r.json();
       const taskIds = Object.values(data);
-      setBatchLogs(prev => [...prev, { ts: new Date().toLocaleTimeString(), msg: `${taskIds.length} tâches lancées`, level:'success' }]);
-      setBatchStatus('done');
+      const mainTid = data.task_id || Object.values(data)[0];
+      setBatchTaskId(mainTid);
+      setBatchLogs(prev => [...prev, { ts: new Date().toLocaleTimeString(), msg: `${Object.keys(data).length} tâches lancées`, level:'success' }]);
+      setBatchStatus('running');
+      // Polling pour suivre la progression
+      const poll = setInterval(async () => {
+        try {
+          const r2 = await fetch(`${SERVER}/task/${mainTid}`);
+          const d2 = await r2.json();
+          setBatchLogs([...d2.logs]);
+          if (d2.done) { clearInterval(poll); setBatchStatus(d2.status); }
+        } catch {}
+      }, 1000);
     } catch(e) {
       setBatchLogs(prev => [...prev, { ts: '--', msg: e.message, level:'error' }]);
       setBatchStatus('error');
@@ -658,11 +670,61 @@ export default function BonusAutoPage() {
             }}>
             {batchStatus === 'running' ? '⏳ En cours…' : '🚀 Tout envoyer'}
           </button>
+          {/* Boutons Pause / Reprendre / Arrêter */}
+          {(batchStatus === 'running' || batchStatus === 'pausing') && (
+            <>
+              <button onClick={pauseBatch} style={{
+                padding:'10px 16px', borderRadius:8, border:'none', cursor:'pointer',
+                background:'#FBBF24', color:'#000', fontWeight:700, fontSize:13,
+              }}>⏸ Pause</button>
+              <button onClick={stopBatch} style={{
+                padding:'10px 16px', borderRadius:8, border:'none', cursor:'pointer',
+                background:'#F87171', color:'#fff', fontWeight:700, fontSize:13,
+              }}>⏹ Arrêter</button>
+            </>
+          )}
+          {batchStatus === 'paused' && (
+            <>
+              <button onClick={resumeBatch} style={{
+                padding:'10px 18px', borderRadius:8, border:'none', cursor:'pointer',
+                background:'#34D399', color:'#fff', fontWeight:700, fontSize:13,
+              }}>▶ Reprendre</button>
+              <button onClick={stopBatch} style={{
+                padding:'10px 16px', borderRadius:8, border:'none', cursor:'pointer',
+                background:'#F87171', color:'#fff', fontWeight:700, fontSize:13,
+              }}>⏹ Arrêter</button>
+            </>
+          )}
+          {batchStatus === 'stopped' && (
+            <span style={{ fontSize:12, color:'#F87171', fontWeight:600 }}>⏹ Arrêté</span>
+          )}
         </div>
       )}
 
+      {batchProgress && (
+        <div style={{ marginTop:8, background:'var(--bg3)', borderRadius:8, padding:'10px 14px' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, marginBottom:6 }}>
+            <span style={{ color:'var(--text)', fontWeight:600 }}>
+              Progression : {batchProgress.current}/{batchProgress.total}
+            </span>
+            <span style={{ color:'var(--muted)' }}>
+              ✅ {batchProgress.results.filter(r=>r.status==='done').length} réussis
+              {batchProgress.results.filter(r=>r.status==='error').length > 0 &&
+                ` · ❌ ${batchProgress.results.filter(r=>r.status==='error').length} erreurs`}
+            </span>
+          </div>
+          <div style={{ background:'var(--border)', borderRadius:4, height:6, overflow:'hidden' }}>
+            <div style={{
+              height:'100%', borderRadius:4, background:'var(--accent)',
+              width: `${(batchProgress.current/batchProgress.total)*100}%`,
+              transition:'width .3s',
+            }}/>
+          </div>
+        </div>
+      )}
       {batchLogs.length > 0 && (
-        <div style={{ background:'var(--bg3)', borderRadius:8, padding:'8px 12px', marginTop:10 }}>
+        <div style={{ background:'var(--bg3)', borderRadius:8, padding:'8px 12px', marginTop:10,
+          maxHeight:200, overflowY:'auto' }}>
           {batchLogs.map((l,i) => <LogLine key={i} entry={l}/>)}
         </div>
       )}
