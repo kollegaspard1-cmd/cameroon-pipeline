@@ -446,6 +446,45 @@ export default function BonusAutoPage() {
   const [batchProgress, setBatchProgress] = useState(null);
   const batchPollRef = React.useRef(null);
 
+  // Lire le transfert depuis ResultPage (sessionStorage)
+  useEffect(() => {
+    const transfer = sessionStorage.getItem('bonusTransfer');
+    if (transfer) {
+      try {
+        const data = JSON.parse(transfer);
+        sessionStorage.removeItem('bonusTransfer');
+        // Charger casino
+        if (data.casino_csv) {
+          setLoadedFiles(prev => ({ ...prev, casino: data.casino_csv }));
+        }
+        // Charger cashback
+        if (data.cashback_csv) {
+          setLoadedFiles(prev => ({ ...prev, cashback: data.cashback_csv }));
+        }
+        // Charger sport files
+        if (data.sport_files?.length > 0) {
+          setSportFiles(data.sport_files.map((sf, idx) => ({
+            id: Date.now() + idx,
+            name: sf.filename,
+            content: sf.csv_content,
+            label: sf.amount_label,
+          })));
+        }
+        // Notification
+        const types = [
+          data.casino_csv ? '🎰 Casino' : null,
+          data.cashback_csv ? '💸 Cashback' : null,
+          data.sport_files?.length > 0 ? `⚽ Sport (${data.sport_files.length})` : null,
+        ].filter(Boolean);
+        if (types.length > 0) {
+          setTimeout(() => alert(`✅ Fichiers transférés depuis Results :
+${types.join('
+')}`), 500);
+        }
+      } catch(e) { console.warn('Transfer error:', e); }
+    }
+  }, []); // eslint-disable-line
+
   useEffect(() => {
     const check = () => fetch(`${SERVER}/status`)
       .then(r => r.json())
