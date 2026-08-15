@@ -66,6 +66,7 @@ function MiniTable({ rows, cols, maxRows=8 }) {
   if (!rows.length) return <div style={{ fontSize:12, color:'var(--muted)', padding:'10px 0' }}>No data</div>;
   return (
     <>
+      <div style={showAll ? { maxHeight:260, overflowY:'auto' } : {}}>
       <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12, marginTop:10 }}>
         <thead>
           <tr>
@@ -74,6 +75,7 @@ function MiniTable({ rows, cols, maxRows=8 }) {
                 textAlign: c.right ? 'right' : 'left',
                 padding:'6px 8px', color:'var(--muted)', fontWeight:600,
                 borderBottom:'1px solid var(--border)', whiteSpace:'nowrap', fontSize:11,
+                position: showAll ? 'sticky' : 'static', top:0, background:'var(--bg2)',
               }}>{c.label}</th>
             ))}
           </tr>
@@ -101,6 +103,7 @@ function MiniTable({ rows, cols, maxRows=8 }) {
           ))}
         </tbody>
       </table>
+      </div>
       {rows.length > maxRows && (
         <button
           onClick={() => setShowAll(o => !o)}
