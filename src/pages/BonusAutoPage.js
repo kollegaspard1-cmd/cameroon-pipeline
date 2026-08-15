@@ -22,8 +22,16 @@ function LogLine({ entry }) {
 }
 
 
-function SportBonusSection({ serverOk, onFilesLoaded }) {
-  const [files,  setFiles]  = useState([]); // [{id, name, content, label}]
+function SportBonusSection({ serverOk, onFilesLoaded, initialFiles }) {
+  const [files,  setFiles]  = useState([]);
+
+  // Charger initialFiles si fournis depuis le parent
+  React.useEffect(() => {
+    if (initialFiles && initialFiles.length > 0 && files.length === 0) {
+      setFiles(initialFiles);
+      onFilesLoaded(initialFiles);
+    }
+  }, [initialFiles]); // eslint-disable-line // [{id, name, content, label}]
   const [status, setStatus] = useState('idle'); // idle | running | done | error
   const [logs,   setLogs]   = useState([]);
   const fileRef = useRef();
@@ -218,9 +226,19 @@ function SportBonusSection({ serverOk, onFilesLoaded }) {
   );
 }
 
-function BonusCard({ type, onFileLoaded }) {
+function BonusCard({ type, onFileLoaded, initialFile }) {
   const fileRef = useRef();
   const [file, setFile]     = useState(null);
+
+  // Charger initialFile si fourni depuis le parent (transfert Results)
+  React.useEffect(() => {
+    if (initialFile) {
+      const lines = initialFile.split('\n').filter(l => l.trim());
+      setFile({ name: type.desc, content: initialFile });
+      setPreview(lines.slice(0, 6));
+      onFileLoaded?.(type.id, initialFile);
+    }
+  }, [initialFile]); // eslint-disable-line
   const [preview, setPreview] = useState([]);
   const [taskId, setTaskId] = useState(null);
   const [logs, setLogs]     = useState([]);
@@ -691,12 +709,14 @@ export default function BonusAutoPage() {
         gap:14, marginBottom:14,
       }}>
         {BONUS_TYPES.map(type => (
-          <BonusCard key={type.id} type={type} onFileLoaded={handleFileLoaded}/>
+          <BonusCard key={type.id} type={type} onFileLoaded={handleFileLoaded}
+            initialFile={loadedFiles[type.id] || null}/>
         ))}
       </div>
 
       {/* Section Sport Bonus — multi-fichiers */}
-      <SportBonusSection serverOk={serverOk} onFilesLoaded={(files) => setSportFiles(files)}/>
+      <SportBonusSection serverOk={serverOk} onFilesLoaded={(files) => setSportFiles(files)}
+        initialFiles={sportFiles}/>
 
       {/* Bouton Tout envoyer */}
       {filesReady > 1 && (
