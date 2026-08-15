@@ -440,9 +440,11 @@ export default function BonusAutoPage() {
   const [chromeLaunching, setChromeLaunching] = useState(false);
   const [loadedFiles, setLoadedFiles] = useState({});
   const [sportFiles,  setSportFiles]  = useState([]); // [{name, content, label}]
-  const [batchStatus, setBatchStatus] = useState('idle');
-  const [batchTaskId, setBatchTaskId] = useState(null);
-  const [batchLogs, setBatchLogs] = useState([]);
+  const [batchStatus,   setBatchStatus]   = useState('idle');
+  const [batchTaskId,   setBatchTaskId]   = useState(null);
+  const [batchLogs,     setBatchLogs]     = useState([]);
+  const [batchProgress, setBatchProgress] = useState(null);
+  const batchPollRef = React.useRef(null);
 
   useEffect(() => {
     const check = () => fetch(`${SERVER}/status`)
@@ -475,37 +477,64 @@ export default function BonusAutoPage() {
     setLoadedFiles(prev => ({ ...prev, [typeId]: content }));
   };
 
-  const sendAll = async () => {
-    setBatchStatus('running');
-    setBatchLogs([{ ts: new Date().toLocaleTimeString(), msg: 'Envoi de tous les bonus disponibles…', level:'info' }]);
-    const body = {};
-    if (loadedFiles.casino)    body.casino_csv    = loadedFiles.casino;
-    if (loadedFiles.cashback)  body.cashback_csv  = loadedFiles.cashback;
-    body.sport_files = sportFiles.map(f => ({ csv_content: f.content, amount_label: f.label }));
+  const startBatchPolling = (tid) => {
+    if (batchPollRef.current) clearInterval(batchPollRef.current);
+    batchPollRef.current = setInterval(async () => {
+      try {
+        const [tr, sr] = await Promise.all([
+          fetch(`${SERVER}/task/${tid}`).then(r => r.json()),
+          fetch(`${SERVER}/sequence/${tid}`).then(r => r.json()),
+        ]);
+        setBatchLogs([...tr.logs]);
+        setBatchProgress({ current: sr.current, total: sr.total, results: sr.results || [] });
+        if (tr.done) {
+          clearInterval(batchPollRef.current);
+          setBatchStatus(tr.status);
+        }
+      } catch {}
+    }, 1000);
+  };
 
+  const sendAll = async () => {
+    if (batchPollRef.current) clearInterval(batchPollRef.current);
+    setBatchStatus('running');
+    setBatchProgress(null);
+    setBatchLogs([{ ts: new Date().toLocaleTimeString(), msg: 'Démarrage envoi séquentiel…', level:'info' }]);
+    const body = {};
+    if (loadedFiles.casino)   body.casino_csv   = loadedFiles.casino;
+    if (loadedFiles.cashback) body.cashback_csv = loadedFiles.cashback;
+    body.sport_files = sportFiles.map(f => ({ csv_content: f.content, amount_label: f.label }));
     try {
       const r = await fetch(`${SERVER}/send/all`, {
         method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body),
       });
       const data = await r.json();
-      const taskIds = Object.values(data);
-      const mainTid = data.task_id || Object.values(data)[0];
-      setBatchTaskId(mainTid);
-      setBatchLogs(prev => [...prev, { ts: new Date().toLocaleTimeString(), msg: `${Object.keys(data).length} tâches lancées`, level:'success' }]);
-      setBatchStatus('running');
-      // Polling pour suivre la progression
-      const poll = setInterval(async () => {
-        try {
-          const r2 = await fetch(`${SERVER}/task/${mainTid}`);
-          const d2 = await r2.json();
-          setBatchLogs([...d2.logs]);
-          if (d2.done) { clearInterval(poll); setBatchStatus(d2.status); }
-        } catch {}
-      }, 1000);
+      setBatchTaskId(data.task_id);
+      startBatchPolling(data.task_id);
     } catch(e) {
-      setBatchLogs(prev => [...prev, { ts: '--', msg: e.message, level:'error' }]);
+      setBatchLogs([{ ts:'--', msg: e.message, level:'error' }]);
       setBatchStatus('error');
     }
+  };
+
+  const pauseBatch = async () => {
+    if (!batchTaskId) return;
+    await fetch(`${SERVER}/pause/${batchTaskId}`, { method:'POST' });
+    setBatchStatus('pausing');
+  };
+
+  const resumeBatch = async () => {
+    if (!batchTaskId) return;
+    setBatchStatus('running');
+    await fetch(`${SERVER}/resume/${batchTaskId}`, { method:'POST' });
+    startBatchPolling(batchTaskId);
+  };
+
+  const stopBatch = async () => {
+    if (!batchTaskId) return;
+    await fetch(`${SERVER}/stop/${batchTaskId}`, { method:'POST' });
+    if (batchPollRef.current) clearInterval(batchPollRef.current);
+    setBatchStatus('stopped');
   };
 
   const filesReady = Object.keys(loadedFiles).length + sportFiles.length;
