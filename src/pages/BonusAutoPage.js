@@ -229,9 +229,9 @@ function BonusCard({ type, onFileLoaded, initialFile }) {
   const [status, setStatus] = useState('idle'); // idle | running | done | error
   const [serverOk,  setServerOk]  = useState(null);
 
-  // Notifier le parent si initialFile fourni
+  // Notifier le parent si initialFile fourni (sauf si reset)
   React.useEffect(() => {
-    if (initialFile) onFileLoaded?.(type.id, initialFile);
+    if (initialFile && !ignoreInit) onFileLoaded?.(type.id, initialFile);
   }, []); // eslint-disable-line
   const [chromeCdp, setChromeCdp] = useState(null); // true=ok, false=non, null=check en cours
   const [chromeLaunching, setChromeLaunching] = useState(false);
@@ -299,10 +299,13 @@ function BonusCard({ type, onFileLoaded, initialFile }) {
     }
   };
 
+  const [ignoreInit, setIgnoreInit] = useState(false);
   const reset = () => {
     clearInterval(pollRef.current);
     setFile(null); setPreview([]); setTaskId(null);
     setLogs([]); setStatus('idle');
+    setIgnoreInit(true); // Ne plus utiliser initialFile après reset
+    onFileLoaded?.(type.id, null); // Notifier le parent
   };
 
   const statusColor = { idle:'var(--muted)', running:'#FBBF24', done:'#34D399', error:'#F87171' }[status];
