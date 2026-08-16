@@ -25,13 +25,14 @@ function LogLine({ entry }) {
 function SportBonusSection({ serverOk, onFilesLoaded, initialFiles }) {
   const [files,  setFiles]  = useState([]);
 
-  // Charger initialFiles si fournis depuis le parent
+  // Charger initialFiles UNE SEULE FOIS au montage
+  const initialApplied = React.useRef(false);
   React.useEffect(() => {
-    if (initialFiles && initialFiles.length > 0 && files.length === 0) {
+    if (!initialApplied.current && initialFiles && initialFiles.length > 0) {
+      initialApplied.current = true;
       setFiles(initialFiles);
-      onFilesLoaded(initialFiles);
     }
-  }, [initialFiles]); // eslint-disable-line
+  }, []); // eslint-disable-line
   const [status, setStatus] = useState('idle'); // idle | running | done | error
   const [logs,   setLogs]   = useState([]);
   const fileRef = useRef();
@@ -230,15 +231,16 @@ function BonusCard({ type, onFileLoaded, initialFile }) {
   const fileRef = useRef();
   const [file, setFile]     = useState(null);
 
-  // Charger initialFile si fourni depuis le parent (transfert Results)
+  // Charger initialFile UNE SEULE FOIS au montage
+  const initApplied = React.useRef(false);
   React.useEffect(() => {
-    if (initialFile) {
+    if (!initApplied.current && initialFile) {
+      initApplied.current = true;
       const lines = initialFile.split('\n').filter(l => l.trim());
       setFile({ name: type.desc, content: initialFile });
       setPreview(lines.slice(0, 6));
-      onFileLoaded?.(type.id, initialFile);
     }
-  }, [initialFile]); // eslint-disable-line
+  }, []); // eslint-disable-line
   const [preview, setPreview] = useState([]);
   const [taskId, setTaskId] = useState(null);
   const [logs, setLogs]     = useState([]);
