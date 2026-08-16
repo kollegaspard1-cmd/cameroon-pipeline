@@ -23,16 +23,7 @@ function LogLine({ entry }) {
 
 
 function SportBonusSection({ serverOk, onFilesLoaded, initialFiles }) {
-  const [files,  setFiles]  = useState([]);
-
-  // Charger initialFiles UNE SEULE FOIS au montage
-  const initialApplied = React.useRef(false);
-  React.useEffect(() => {
-    if (!initialApplied.current && initialFiles && initialFiles.length > 0) {
-      initialApplied.current = true;
-      setFiles(initialFiles);
-    }
-  }, []); // eslint-disable-line
+  const [files, setFiles] = useState(initialFiles && initialFiles.length > 0 ? initialFiles : []);
   const [status, setStatus] = useState('idle'); // idle | running | done | error
   const [logs,   setLogs]   = useState([]);
   const fileRef = useRef();
@@ -229,23 +220,19 @@ function SportBonusSection({ serverOk, onFilesLoaded, initialFiles }) {
 
 function BonusCard({ type, onFileLoaded, initialFile }) {
   const fileRef = useRef();
-  const [file, setFile]     = useState(null);
-
-  // Charger initialFile UNE SEULE FOIS au montage
-  const initApplied = React.useRef(false);
-  React.useEffect(() => {
-    if (!initApplied.current && initialFile) {
-      initApplied.current = true;
-      const lines = initialFile.split('\n').filter(l => l.trim());
-      setFile({ name: type.desc, content: initialFile });
-      setPreview(lines.slice(0, 6));
-    }
-  }, []); // eslint-disable-line
-  const [preview, setPreview] = useState([]);
+  const initFile = initialFile ? { name: type.desc, content: initialFile } : null;
+  const initPreview = initialFile ? initialFile.split('\n').filter(l => l.trim()).slice(0, 6) : [];
+  const [file, setFile]     = useState(initFile);
+  const [preview, setPreview] = useState(initPreview);
   const [taskId, setTaskId] = useState(null);
   const [logs, setLogs]     = useState([]);
   const [status, setStatus] = useState('idle'); // idle | running | done | error
   const [serverOk,  setServerOk]  = useState(null);
+
+  // Notifier le parent si initialFile fourni
+  React.useEffect(() => {
+    if (initialFile) onFileLoaded?.(type.id, initialFile);
+  }, []); // eslint-disable-line
   const [chromeCdp, setChromeCdp] = useState(null); // true=ok, false=non, null=check en cours
   const [chromeLaunching, setChromeLaunching] = useState(false);
   const pollRef = useRef(null);
