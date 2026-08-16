@@ -358,9 +358,9 @@ function BonusCard({ type, onFileLoaded, initialFile }) {
               <span style={{ fontSize:11, color:'var(--muted)' }}>{rowCount} joueurs</span>
               {status === 'idle' && (
                 <button onClick={reset} style={{
-                  fontSize:10, padding:'2px 7px', borderRadius:4, border:'none',
-                  background:'var(--bg)', color:'var(--muted)', cursor:'pointer',
-                }}>✕ Changer</button>
+                  fontSize:11, padding:'3px 9px', borderRadius:5, border:'1px solid #F87171',
+                  background:'rgba(248,113,113,.1)', color:'#F87171', cursor:'pointer', fontWeight:600,
+                }}>✕ Retirer</button>
               )}
             </div>
           </div>
