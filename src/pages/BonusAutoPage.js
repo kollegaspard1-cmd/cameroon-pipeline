@@ -509,8 +509,17 @@ export default function BonusAutoPage() {
     setChromeLaunching(false);
   };
 
-  const handleFileLoaded = (typeId, content) => {
-    setLoadedFiles(prev => ({ ...prev, [typeId]: content }));
+  const handleFileLoaded = (typeId, fileContent) => {
+    if (fileContent === null) {
+      // Fichier retiré — supprimer de loadedFiles
+      setLoadedFiles(prev => {
+        const next = { ...prev };
+        delete next[typeId];
+        return next;
+      });
+    } else {
+      setLoadedFiles(prev => ({ ...prev, [typeId]: fileContent }));
+    }
   };
 
   const startBatchPolling = (tid) => {
