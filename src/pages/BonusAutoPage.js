@@ -446,7 +446,8 @@ export default function BonusAutoPage() {
   const [chromeCdp, setChromeCdp] = useState(null); // true=ok, false=non, null=check en cours
   const [chromeLaunching, setChromeLaunching] = useState(false);
   const [loadedFiles, setLoadedFiles] = useState({});
-  const [sportFiles,  setSportFiles]  = useState([]); // [{name, content, label}]
+  const [sportFiles,  setSportFiles]  = useState([]);
+  const [transferKey, setTransferKey] = useState(0); // Force re-montage après transfert // [{name, content, label}]
   const [batchStatus,   setBatchStatus]   = useState('idle');
   const [batchTaskId,   setBatchTaskId]   = useState(null);
   const [batchLogs,     setBatchLogs]     = useState([]);
@@ -460,14 +461,18 @@ export default function BonusAutoPage() {
     try {
       const data = JSON.parse(transfer);
       sessionStorage.removeItem('bonusTransfer');
-      if (data.casino_csv)   setLoadedFiles(prev => ({ ...prev, casino: data.casino_csv }));
-      if (data.cashback_csv) setLoadedFiles(prev => ({ ...prev, cashback: data.cashback_csv }));
+      const newFiles = {};
+      if (data.casino_csv)   newFiles.casino   = data.casino_csv;
+      if (data.cashback_csv) newFiles.cashback = data.cashback_csv;
+      setLoadedFiles(prev => ({ ...prev, ...newFiles }));
       if (data.sport_files?.length > 0) {
         setSportFiles(data.sport_files.map((sf, idx) => ({
           id: Date.now() + idx, name: sf.filename,
           content: sf.csv_content, label: sf.amount_label,
         })));
       }
+      // Forcer re-montage des cartes pour afficher les nouveaux fichiers
+      setTransferKey(k => k + 1);
     } catch(e) { console.warn('Transfer error:', e); }
   }, []); // eslint-disable-line
 
@@ -698,13 +703,14 @@ export default function BonusAutoPage() {
         gap:14, marginBottom:14,
       }}>
         {BONUS_TYPES.map(type => (
-          <BonusCard key={type.id} type={type} onFileLoaded={handleFileLoaded}
+          <BonusCard key={`${type.id}-${transferKey}`} type={type} onFileLoaded={handleFileLoaded}
             initialFile={loadedFiles[type.id] || null}/>
         ))}
       </div>
 
       {/* Section Sport Bonus — multi-fichiers */}
-      <SportBonusSection serverOk={serverOk} onFilesLoaded={(files) => setSportFiles(files)}
+      <SportBonusSection key={`sport-${transferKey}`} serverOk={serverOk}
+        onFilesLoaded={(files) => setSportFiles(files)}
         initialFiles={sportFiles}/>
 
       {/* Bouton Tout envoyer */}
