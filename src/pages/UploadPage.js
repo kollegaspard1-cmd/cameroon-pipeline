@@ -1,5 +1,6 @@
 // src/pages/UploadPage.js
 import React, { useState, useCallback, useRef } from 'react';
+import { useAppContext } from '../AppContext';
 import { runPipeline, readExcelSheets, readCSV, buildAllExports } from '../lib/pipeline';
 import { saveRun } from '../lib/runHistory';
 import { loadRulesForCountry, DEFAULT_RULES } from '../lib/roundingRules';
