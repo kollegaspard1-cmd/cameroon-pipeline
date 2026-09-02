@@ -12,8 +12,6 @@ import MGMRetentionPage         from './pages/MGMRetentionPage';
 import BetshopMarchesPage       from './pages/BetshopMarchesPage';
 import BetshopMultiPeriodesPage from './pages/BetshopMultiPeriodesPage';
 import RetailReportPage         from './pages/RetailReportPage';
-import BonusAutoPage            from './pages/BonusAutoPage';
-import BonusSenderPage          from './pages/BonusSenderPage';
 import WatchlistPage            from './pages/WatchlistPage';
 import './App.css';
 
@@ -22,7 +20,6 @@ const NAV = [
     section: 'Pipeline CM',
     items: [
       { id: 'upload',      label: 'Daily Retention', icon: '⚡' },
-      { id: 'bonus-auto',  label: 'Envoi Bonus',     icon: '🤖' },
       { id: 'result',      label: 'Results',         icon: '📊', requiresResult: true },
       { id: 'history',     label: 'History',          icon: '🕐' },
     ]
@@ -53,13 +50,6 @@ const NAV = [
       { id: 'watchlist',      label: 'Watchlist',           icon: '⚠️' },
     ]
   },
-
-  {
-    section: 'Automatisation',
-    items: [
-      { id: 'bonus-sender', label: 'Bonus Sender', icon: '🤖' },
-    ]
-  },
   {
     section: 'MGM Retention',
     items: [
@@ -81,10 +71,8 @@ const TITLES = {
   rapports:          { title: 'Rapports Réalisation',     sub: 'Réalisé vs Objectif par super' },
   'betshop-marches': { title: 'Betshop — Par Marché',    sub: 'Fichiers par marché + CAMPRESJ + Global' },
   'betshop-periodes':{ title: 'Betshop — Multi-Périodes', sub: 'Analyse Bimestrielle / Trimestrielle / Semestrielle / Annuelle' },
-  'bonus-auto':        { title: 'Bonus Auto',              sub: 'Envoi automatique Casino · Cashback · Sport' },
   'retail-report':   { title: 'Retail Report',             sub: 'Cashier & Betshop · Deposits & Withdraws by Market' },
   'watchlist':       { title: 'Watchlist',                  sub: 'Bet Performance MTD vs LM vs LY — Shops en retard' },
-  'bonus-sender':    { title: 'Bonus Sender', sub: 'Automatisation envoi bonus Meridianbet BO' },
   mgm:               { title: 'MGM · Upload & Bonus',    sub: 'Upload data & bonus validator' },
   'mgm-sport':       { title: 'MGM · Sport',              sub: 'Players with 0 tickets this month' },
   'mgm-casino':      { title: 'MGM · Casino',             sub: 'Players with 0 casino payin this month' },
@@ -160,9 +148,7 @@ export default function App() {
             {page === 'objectifs'        && <ObjectifsPage     onNavigate={setPage} />}
             {page === 'rapports'         && <RapportsPage      onNavigate={setPage} />}
             {page === 'retail-report'    && <RetailReportPage />}
-            {page === 'bonus-sender'     && <BonusSenderPage />}
             {page === 'watchlist'        && <WatchlistPage />}
-            {page === 'bonus-auto'       && <BonusAutoPage />}
             {page === 'betshop-marches'  && <BetshopMarchesPage onNavigate={setPage} />}
             {page === 'betshop-periodes' && <BetshopMultiPeriodesPage onNavigate={setPage} />}
             {(page === 'mgm' || page.startsWith('mgm-')) && (
