@@ -1,18 +1,18 @@
 // src/App.js
 import React, { useState } from 'react';
-import { AppProvider }          from './AppContext';
+import { AppProvider, useAppContext } from './AppContext';
+import { COUNTRIES }                  from './translations';
 import UploadPage               from './pages/UploadPage';
 import ResultPage               from './pages/ResultPage';
 import HistoryPage              from './pages/HistoryPage';
-import ObjectifsPage            from './pages/ObjectifsPage';
 import CampresjPage             from './pages/CampresjPage';
-import RapportsPage             from './pages/RapportsPage';
 import CMReportPage             from './pages/CMReportPage';
 import MGMRetentionPage         from './pages/MGMRetentionPage';
 import BetshopMarchesPage       from './pages/BetshopMarchesPage';
 import BetshopMultiPeriodesPage from './pages/BetshopMultiPeriodesPage';
 import RetailReportPage         from './pages/RetailReportPage';
 import WatchlistPage            from './pages/WatchlistPage';
+import BonusAutoPage            from './pages/BonusAutoPage';
 import './App.css';
 
 const NAV = [
@@ -20,8 +20,9 @@ const NAV = [
     section: 'Pipeline CM',
     items: [
       { id: 'upload',      label: 'Daily Retention', icon: '⚡' },
+      { id: 'bonus-auto',  label: 'Envoi Bonus',     icon: '🤖' },
       { id: 'result',      label: 'Results',         icon: '📊', requiresResult: true },
-      { id: 'history',     label: 'History',          icon: '🕐' },
+      { id: 'history',     label: 'History',         icon: '🕐' },
     ]
   },
   {
@@ -39,46 +40,99 @@ const NAV = [
   {
     section: 'Betshop',
     items: [
-      { id: 'betshop-marches',    label: 'Par Marché',      icon: '🗺️' },
-      { id: 'betshop-periodes',   label: 'Multi-Périodes',  icon: '📅' },
+      { id: 'betshop-marches',  label: 'Par Marché',     icon: '🗺️' },
+      { id: 'betshop-periodes', label: 'Multi-Périodes', icon: '📅' },
     ]
   },
   {
     section: 'Retail',
     items: [
-      { id: 'retail-report',  label: 'Cashier & Deposits', icon: '📋' },
-      { id: 'watchlist',      label: 'Watchlist',           icon: '⚠️' },
+      { id: 'retail-report', label: 'Cashier & Deposits', icon: '📋' },
+      { id: 'watchlist',     label: 'Watchlist',           icon: '⚠️' },
+    ]
+  },
+  {
+    section: 'Automatisation',
+    items: [
+      { id: 'bonus-sender', label: 'Bonus Sender', icon: '📦' },
     ]
   },
   {
     section: 'MGM Retention',
     items: [
-      { id: 'mgm',         label: 'Upload & Bonus',  icon: '📁' },
-      { id: 'mgm-sport',   label: 'Sport',            icon: '⚽', sub: true },
-      { id: 'mgm-casino',  label: 'Casino',           icon: '🎰', sub: true },
-      { id: 'mgm-deposit', label: 'Deposit',          icon: '💳', sub: true },
+      { id: 'mgm',         label: 'Upload & Bonus', icon: '📁' },
+      { id: 'mgm-sport',   label: 'Sport',          icon: '⚽', sub: true },
+      { id: 'mgm-casino',  label: 'Casino',         icon: '🎰', sub: true },
+      { id: 'mgm-deposit', label: 'Deposit',        icon: '💳', sub: true },
     ]
   },
 ];
 
 const TITLES = {
-  upload:            { title: 'Run Pipeline',            sub: 'Cameroon Daily Campaign Engine' },
-  result:            { title: 'Pipeline Results',         sub: 'Download output files' },
-  history:           { title: 'Run History',              sub: 'Firebase-stored past runs' },
-  cmreport:          { title: 'Daily Sport Report',       sub: 'Remplissage du template depuis les CSV' },
-  campresj:          { title: 'CAMPRESJ',                   sub: 'Objectifs & Réalisation mensuelle' },
-  objectifs:         { title: 'Objectifs CAMPRESJ',       sub: 'Générer les objectifs mensuels' },
-  rapports:          { title: 'Rapports Réalisation',     sub: 'Réalisé vs Objectif par super' },
-  'betshop-marches': { title: 'Betshop — Par Marché',    sub: 'Fichiers par marché + CAMPRESJ + Global' },
-  'betshop-periodes':{ title: 'Betshop — Multi-Périodes', sub: 'Analyse Bimestrielle / Trimestrielle / Semestrielle / Annuelle' },
-  'retail-report':   { title: 'Retail Report',             sub: 'Cashier & Betshop · Deposits & Withdraws by Market' },
-  'watchlist':       { title: 'Watchlist',                  sub: 'Bet Performance MTD vs LM vs LY — Shops en retard' },
-  mgm:               { title: 'MGM · Upload & Bonus',    sub: 'Upload data & bonus validator' },
-  'mgm-sport':       { title: 'MGM · Sport',              sub: 'Players with 0 tickets this month' },
-  'mgm-casino':      { title: 'MGM · Casino',             sub: 'Players with 0 casino payin this month' },
-  'mgm-deposit':     { title: 'MGM · Deposit',            sub: 'Players with 0 deposit this month' },
+  'upload':            { title: 'Run Pipeline',             sub: 'Cameroon Daily Campaign Engine' },
+  'bonus-auto':        { title: 'Bonus Auto',               sub: 'Envoi automatique Casino · Cashback · Sport' },
+  'result':            { title: 'Pipeline Results',         sub: 'Download output files' },
+  'history':           { title: 'Run History',              sub: 'Firebase-stored past runs' },
+  'cmreport':          { title: 'Daily Sport Report',       sub: 'Remplissage du template depuis les CSV' },
+  'campresj':          { title: 'CAMPRESJ',                 sub: 'Objectifs & Réalisation mensuelle' },
+  'betshop-marches':   { title: 'Betshop — Par Marché',    sub: 'Fichiers par marché + CAMPRESJ + Global' },
+  'betshop-periodes':  { title: 'Betshop — Multi-Périodes', sub: 'Analyse Bimestrielle / Trimestrielle / Semestrielle / Annuelle' },
+  'retail-report':     { title: 'Retail Report',            sub: 'Cashier & Betshop · Deposits & Withdraws by Market' },
+  'watchlist':         { title: 'Watchlist',                sub: 'Bet Performance MTD vs LM vs LY — Shops en retard' },
+  'bonus-sender':      { title: 'Bonus Sender',             sub: 'Envoi automatisé des bonus' },
+  'mgm':               { title: 'MGM · Upload & Bonus',    sub: 'Upload data & bonus validator' },
+  'mgm-sport':         { title: 'MGM · Sport',             sub: 'Players with 0 tickets this month' },
+  'mgm-casino':        { title: 'MGM · Casino',            sub: 'Players with 0 casino payin this month' },
+  'mgm-deposit':       { title: 'MGM · Deposit',           sub: 'Players with 0 deposit this month' },
 };
 
+// ── Barre Langue / Pays (globale) ─────────────────────────────────────────
+function LangCountryBar() {
+  const { lang, setLang, country, setCountry } = useAppContext();
+  return (
+    <div style={{
+      display: 'flex', gap: 6, alignItems: 'center',
+      padding: '4px 10px',
+      background: 'var(--bg2)',
+      borderLeft: '1px solid var(--border)',
+    }}>
+      {['FR', 'EN'].map(l => (
+        <button key={l} onClick={() => setLang(l)} style={{
+          fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+          border: `1px solid ${lang === l ? 'var(--accent)' : 'var(--border)'}`,
+          background: lang === l ? 'var(--accent)' : 'transparent',
+          color: lang === l ? '#fff' : 'var(--muted)',
+          cursor: 'pointer',
+        }}>{l}</button>
+      ))}
+      <div style={{ width: 1, height: 14, background: 'var(--border)' }}/>
+      <select
+        value={country}
+        onChange={e => setCountry(e.target.value)}
+        style={{
+          fontSize: 11, padding: '2px 6px', borderRadius: 4,
+          border: '1px solid var(--border)', background: 'var(--bg3)',
+          color: 'var(--text)', cursor: 'pointer',
+        }}
+      >
+        {COUNTRIES.map(c => (
+          <option key={c.code} value={c.code}>{c.flag} {c.name}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// ── AppInner : écoute navigateTo ──────────────────────────────────────────
+function AppInner({ setPage }) {
+  const { navigateTo, setNavigateTo } = useAppContext();
+  React.useEffect(() => {
+    if (navigateTo) { setPage(navigateTo); setNavigateTo(null); }
+  }, [navigateTo, setNavigateTo, setPage]);
+  return null;
+}
+
+// ── App principal ─────────────────────────────────────────────────────────
 export default function App() {
   const [page, setPage]                     = useState('upload');
   const [sidebarOpen, setSidebarOpen]       = useState(false);
@@ -96,14 +150,14 @@ export default function App() {
 
   return (
     <AppProvider>
+      <AppInner setPage={setPage}/>
       <div className="app">
-        {/* Mobile overlay */}
         <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
           onClick={() => setSidebarOpen(false)} />
 
         <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="sidebar-brand">
-            <div className="brand-logo"><span className="brand-dot" /><span className="brand-name">Pipeline CM</span></div>
+            <div className="brand-logo"><span className="brand-dot"/><span className="brand-name">Pipeline CM</span></div>
             <div className="brand-sub">Cameroon Operations</div>
           </div>
           <nav style={{ padding:'0.5rem 0.75rem', flex:1, overflowY:'auto' }}>
@@ -134,25 +188,26 @@ export default function App() {
 
         <div className="main-wrapper">
           <header className="topbar">
-            <button className="hamburger" onClick={() => setSidebarOpen(o => !o)}
-              aria-label="Menu">☰</button>
+            <button className="hamburger" onClick={() => setSidebarOpen(o => !o)} aria-label="Menu">☰</button>
             <span className="topbar-title">{TITLES[page]?.title}</span>
             <span className="topbar-sub">— {TITLES[page]?.sub}</span>
+            <div style={{ marginLeft:'auto' }}>
+              <LangCountryBar/>
+            </div>
           </header>
           <main className="main">
-            {page === 'upload'           && <UploadPage       onResult={handleResult} />}
-            {page === 'result'           && <ResultPage        result={pipelineResult} />}
-            {page === 'history'          && <HistoryPage       />}
-            {page === 'cmreport'         && <CMReportPage      />}
-            {page === 'campresj'        && <CampresjPage />}
-            {page === 'objectifs'        && <ObjectifsPage     onNavigate={setPage} />}
-            {page === 'rapports'         && <RapportsPage      onNavigate={setPage} />}
-            {page === 'retail-report'    && <RetailReportPage />}
-            {page === 'watchlist'        && <WatchlistPage />}
-            {page === 'betshop-marches'  && <BetshopMarchesPage onNavigate={setPage} />}
-            {page === 'betshop-periodes' && <BetshopMultiPeriodesPage onNavigate={setPage} />}
+            {page === 'upload'           && <UploadPage onResult={handleResult}/>}
+            {page === 'bonus-auto'       && <BonusAutoPage/>}
+            {page === 'result'           && <ResultPage result={pipelineResult}/>}
+            {page === 'history'          && <HistoryPage/>}
+            {page === 'cmreport'         && <CMReportPage/>}
+            {page === 'campresj'         && <CampresjPage/>}
+            {page === 'retail-report'    && <RetailReportPage/>}
+            {page === 'watchlist'        && <WatchlistPage/>}
+            {page === 'betshop-marches'  && <BetshopMarchesPage onNavigate={setPage}/>}
+            {page === 'betshop-periodes' && <BetshopMultiPeriodesPage onNavigate={setPage}/>}
             {(page === 'mgm' || page.startsWith('mgm-')) && (
-              <MGMRetentionPage activeTab={mgmTab} onNavigate={setPage} results={mgmResults} onResults={setMgmResults} />
+              <MGMRetentionPage activeTab={mgmTab} onNavigate={setPage} results={mgmResults} onResults={setMgmResults}/>
             )}
           </main>
         </div>
