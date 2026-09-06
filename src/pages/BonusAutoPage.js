@@ -303,6 +303,7 @@ function BonusCard({ type, onFileLoaded, initialFile }) {
     clearInterval(pollRef.current);
     setFile(null); setPreview([]); setTaskId(null);
     setLogs([]); setStatus('idle');
+    onFileLoaded?.(type.id, null); // Retirer de loadedFiles du parent
   };
 
   const statusColor = { idle:'var(--muted)', running:'#FBBF24', done:'#34D399', error:'#F87171' }[status];
@@ -515,10 +516,15 @@ export default function BonusAutoPage() {
       setLoadedFiles(prev => {
         const next = { ...prev };
         delete next[typeId];
+        console.log('[BonusAuto] Retiré:', typeId, '→ loadedFiles:', next);
         return next;
       });
     } else {
-      setLoadedFiles(prev => ({ ...prev, [typeId]: fileContent }));
+      setLoadedFiles(prev => {
+        const next = { ...prev, [typeId]: fileContent };
+        console.log('[BonusAuto] Chargé:', typeId, '→ loadedFiles keys:', Object.keys(next));
+        return next;
+      });
     }
   };
 
@@ -732,8 +738,12 @@ export default function BonusAutoPage() {
             <div style={{ fontSize:13, fontWeight:700, color:'var(--text)' }}>
               Tout envoyer en une fois
             </div>
-            <div style={{ fontSize:11, color:'var(--muted)' }}>
-              {filesReady} fichier{filesReady>1?'s':''} prêt{filesReady>1?'s':''} — chaque envoi s'ouvre dans Chrome
+            <div style={{ fontSize:11, color:'var(--muted)', marginTop:3 }}>
+              {[
+                loadedFiles.casino   ? '🎰 Casino'   : null,
+                loadedFiles.cashback ? '💸 Cashback' : null,
+                ...sportFiles.map(f => `⚽ Sport ${f.label}`),
+              ].filter(Boolean).join(' · ')} — {filesReady} fichier{filesReady>1?'s':''}
             </div>
           </div>
           <button
