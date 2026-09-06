@@ -446,9 +446,10 @@ export default function BonusAutoPage() {
   const [serverOk,  setServerOk]  = useState(null);
   const [chromeCdp, setChromeCdp] = useState(null); // true=ok, false=non, null=check en cours
   const [chromeLaunching, setChromeLaunching] = useState(false);
-  const [loadedFiles, setLoadedFiles] = useState({});
-  const [sportFiles,  setSportFiles]  = useState([]);
-  const [transferKey, setTransferKey] = useState(0); // Force re-montage après transfert // [{name, content, label}]
+  const [loadedFiles,  setLoadedFiles]  = useState({});
+  const [removedFiles, setRemovedFiles] = useState({}); // fichiers retirés manuellement
+  const [sportFiles,   setSportFiles]   = useState([]);
+  const [transferKey,  setTransferKey]  = useState(0); // Force re-montage après transfert // [{name, content, label}]
   const [batchStatus,   setBatchStatus]   = useState('idle');
   const [batchTaskId,   setBatchTaskId]   = useState(null);
   const [batchLogs,     setBatchLogs]     = useState([]);
@@ -512,17 +513,19 @@ export default function BonusAutoPage() {
 
   const handleFileLoaded = (typeId, fileContent) => {
     if (fileContent === null) {
-      // Fichier retiré — supprimer de loadedFiles
+      // Fichier retiré manuellement
       setLoadedFiles(prev => {
         const next = { ...prev };
         delete next[typeId];
-        console.log('[BonusAuto] Retiré:', typeId, '→ loadedFiles:', next);
         return next;
       });
+      setRemovedFiles(prev => ({ ...prev, [typeId]: true }));
     } else {
-      setLoadedFiles(prev => {
-        const next = { ...prev, [typeId]: fileContent };
-        console.log('[BonusAuto] Chargé:', typeId, '→ loadedFiles keys:', Object.keys(next));
+      setLoadedFiles(prev => ({ ...prev, [typeId]: fileContent }));
+      // Si rechargé après retrait, retirer du tracking
+      setRemovedFiles(prev => {
+        const next = { ...prev };
+        delete next[typeId];
         return next;
       });
     }
@@ -552,8 +555,8 @@ export default function BonusAutoPage() {
     setBatchProgress(null);
     setBatchLogs([{ ts: new Date().toLocaleTimeString(), msg: 'Démarrage envoi séquentiel…', level:'info' }]);
     const body = {};
-    if (loadedFiles.casino)   body.casino_csv   = loadedFiles.casino;
-    if (loadedFiles.cashback) body.cashback_csv = loadedFiles.cashback;
+    if (loadedFiles.casino   && !removedFiles.casino)   body.casino_csv   = loadedFiles.casino;
+    if (loadedFiles.cashback && !removedFiles.cashback) body.cashback_csv = loadedFiles.cashback;
     body.sport_files = sportFiles.map(f => ({ csv_content: f.content, amount_label: f.label }));
     try {
       const r = await fetch(`${SERVER}/send/all`, {
@@ -588,7 +591,8 @@ export default function BonusAutoPage() {
     setBatchStatus('stopped');
   };
 
-  const filesReady = Object.keys(loadedFiles).length + sportFiles.length;
+  const activeLoadedFiles = Object.keys(loadedFiles).filter(k => !removedFiles[k]);
+  const filesReady = activeLoadedFiles.length + sportFiles.length;
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: '20px 16px' }}>
@@ -719,7 +723,7 @@ export default function BonusAutoPage() {
       }}>
         {BONUS_TYPES.map(type => (
           <BonusCard key={`${type.id}-${transferKey}`} type={type} onFileLoaded={handleFileLoaded}
-            initialFile={loadedFiles[type.id] || null}/>
+            initialFile={removedFiles[type.id] ? null : (loadedFiles[type.id] || null)}/>
         ))}
       </div>
 
@@ -740,8 +744,8 @@ export default function BonusAutoPage() {
             </div>
             <div style={{ fontSize:11, color:'var(--muted)', marginTop:3 }}>
               {[
-                loadedFiles.casino   ? '🎰 Casino'   : null,
-                loadedFiles.cashback ? '💸 Cashback' : null,
+                (loadedFiles.casino   && !removedFiles.casino)   ? '🎰 Casino'   : null,
+                (loadedFiles.cashback && !removedFiles.cashback) ? '💸 Cashback' : null,
                 ...sportFiles.map(f => `⚽ Sport ${f.label}`),
               ].filter(Boolean).join(' · ')} — {filesReady} fichier{filesReady>1?'s':''}
             </div>
